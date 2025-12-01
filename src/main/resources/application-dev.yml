@@ -1,18 +1,21 @@
 # Development Profile Configuration
 spring:
-  # Database (PostgreSQL) - configure when database is set up
-  # datasource:
-  #   url: jdbc:postgresql://localhost:5432/specflux_dev
-  #   username: postgres
-  #   password: postgres
-  #   driver-class-name: org.postgresql.Driver
-  # jpa:
-  #   hibernate:
-  #     ddl-auto: validate
-  #   show-sql: true
-  #   properties:
-  #     hibernate:
-  #       format_sql: true
+  # Database (PostgreSQL)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/specflux_dev
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${SERVER_PORT:8090}
 
 # Logging
 logging:
