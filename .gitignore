@@ -73,6 +73,3 @@ application-local.properties
 
 # claude
 CLAUDE.md
-
-# Firebase Emulator cache
-firebase/cache/
