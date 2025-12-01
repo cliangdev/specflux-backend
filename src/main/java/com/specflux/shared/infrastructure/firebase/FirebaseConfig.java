@@ -3,6 +3,8 @@ package com.specflux.shared.infrastructure.firebase;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -16,37 +18,59 @@ import com.google.firebase.auth.FirebaseAuth;
 /**
  * Configuration for Firebase Admin SDK.
  *
- * <p>Initializes Firebase from a service account JSON file specified by the FIREBASE_CONFIG_PATH
- * environment variable. When the config path is not set, Firebase initialization is skipped.
+ * <p>Supports two modes:
+ *
+ * <ul>
+ *   <li><b>Emulator mode</b> (firebase.emulator.enabled=true): Connects to Firebase Emulator, no
+ *       service account required
+ *   <li><b>Production mode</b>: Requires FIREBASE_CONFIG_PATH to point to service account JSON
+ * </ul>
  */
 @Configuration
 @ConditionalOnProperty(name = "firebase.enabled", havingValue = "true", matchIfMissing = true)
 public class FirebaseConfig {
 
+  private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
+
   @Value("${firebase.config-path:}")
   private String configPath;
+
+  @Value("${firebase.emulator.enabled:false}")
+  private boolean emulatorEnabled;
+
+  @Value("${firebase.emulator.host:localhost:9099}")
+  private String emulatorHost;
 
   /**
    * Initializes and returns the FirebaseApp instance.
    *
    * @return the FirebaseApp singleton
-   * @throws IOException if the service account file cannot be read
+   * @throws IOException if the service account file cannot be read (production mode only)
    */
   @Bean
   public FirebaseApp firebaseApp() throws IOException {
     if (FirebaseApp.getApps().isEmpty()) {
-      if (configPath == null || configPath.isBlank()) {
-        throw new IllegalStateException(
-            "Firebase config path not set. Set FIREBASE_CONFIG_PATH environment variable.");
+      FirebaseOptions.Builder builder = FirebaseOptions.builder();
+
+      if (emulatorEnabled) {
+        // Emulator mode - use demo project, no credentials needed
+        System.setProperty("FIREBASE_AUTH_EMULATOR_HOST", emulatorHost);
+        builder.setProjectId("demo-specflux");
+        log.info("Firebase configured for emulator at {}", emulatorHost);
+      } else {
+        // Production mode - require service account
+        if (configPath == null || configPath.isBlank()) {
+          throw new IllegalStateException(
+              "Firebase config path not set. Set FIREBASE_CONFIG_PATH environment variable.");
+        }
+
+        try (FileInputStream serviceAccount = new FileInputStream(configPath)) {
+          builder.setCredentials(GoogleCredentials.fromStream(serviceAccount));
+          log.info("Firebase configured with service account from {}", configPath);
+        }
       }
 
-      try (FileInputStream serviceAccount = new FileInputStream(configPath)) {
-        FirebaseOptions options =
-            FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                .build();
-        return FirebaseApp.initializeApp(options);
-      }
+      return FirebaseApp.initializeApp(builder.build());
     }
     return FirebaseApp.getInstance();
   }

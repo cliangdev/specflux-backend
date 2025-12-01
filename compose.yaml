@@ -20,6 +20,17 @@ services:
       timeout: 5s
       retries: 5
 
+  firebase-emulator:
+    image: andreysenov/firebase-tools:latest
+    container_name: specflux-firebase-emulator
+    ports:
+      - "9099:9099"   # Auth emulator
+      - "4000:4000"   # Emulator UI
+    volumes:
+      - ./firebase:/home/node/firebase
+    command: firebase emulators:start --only auth --project demo-specflux
+    working_dir: /home/node/firebase
+
 volumes:
   postgres_data:
     name: specflux-postgres-data
