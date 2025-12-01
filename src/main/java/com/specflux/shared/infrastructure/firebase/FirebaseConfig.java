@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -53,9 +54,11 @@ public class FirebaseConfig {
       FirebaseOptions.Builder builder = FirebaseOptions.builder();
 
       if (emulatorEnabled) {
-        // Emulator mode - use demo project, no credentials needed
+        // Emulator mode - use demo project with mock credentials
         System.setProperty("FIREBASE_AUTH_EMULATOR_HOST", emulatorHost);
-        builder.setProjectId("demo-specflux");
+        builder
+            .setProjectId("demo-specflux")
+            .setCredentials(GoogleCredentials.create(new AccessToken("emulator-token", null)));
         log.info("Firebase configured for emulator at {}", emulatorHost);
       } else {
         // Production mode - require service account
