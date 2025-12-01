@@ -1,0 +1,51 @@
+openapi: 3.1.0
+info:
+  title: SpecFlux API
+  description: REST API for SpecFlux project management
+  version: 1.0.0
+  contact:
+    name: SpecFlux Team
+
+servers:
+  - url: http://localhost:8090/api
+    description: Local development server
+  - url: https://api.specflux.io/api
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Projects
+    description: Project management endpoints
+  - name: Epics
+    description: Epic management endpoints (scoped to projects)
+  - name: Tasks
+    description: Task management endpoints (scoped to projects)
+
+paths:
+  # Project endpoints
+  /projects:
+    $ref: './projects.yaml#/paths/~1projects'
+  /projects/{ref}:
+    $ref: './projects.yaml#/paths/~1projects~1{ref}'
+
+  # Epic endpoints
+  /projects/{projectRef}/epics:
+    $ref: './epics.yaml#/paths/~1projects~1{projectRef}~1epics'
+  /projects/{projectRef}/epics/{epicRef}:
+    $ref: './epics.yaml#/paths/~1projects~1{projectRef}~1epics~1{epicRef}'
+
+  # Task endpoints
+  /projects/{projectRef}/tasks:
+    $ref: './tasks.yaml#/paths/~1projects~1{projectRef}~1tasks'
+  /projects/{projectRef}/tasks/{taskRef}:
+    $ref: './tasks.yaml#/paths/~1projects~1{projectRef}~1tasks~1{taskRef}'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase ID token

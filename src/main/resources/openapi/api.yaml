@@ -1,0 +1,760 @@
+openapi: 3.1.0
+info:
+  title: SpecFlux API
+  description: REST API for SpecFlux project management
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8090/api
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Projects
+    description: Project management endpoints
+  - name: Epics
+    description: Epic management endpoints
+  - name: Tasks
+    description: Task management endpoints
+
+paths:
+  # ==================== PROJECTS ====================
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List user's projects
+      tags: [Projects]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/OrderParam'
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createProject
+      summary: Create a new project
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /projects/{ref}:
+    parameters:
+      - name: ref
+        in: path
+        required: true
+        description: Project public ID (proj_xxx) or project key (SPEC)
+        schema:
+          type: string
+
+    get:
+      operationId: getProject
+      summary: Get a project
+      tags: [Projects]
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateProject
+      summary: Update a project
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteProject
+      summary: Delete a project
+      tags: [Projects]
+      responses:
+        '204':
+          description: Project deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== EPICS ====================
+  /projects/{projectRef}/epics:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listEpics
+      summary: List epics in a project
+      tags: [Epics]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/OrderParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/EpicStatus'
+      responses:
+        '200':
+          description: List of epics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EpicListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createEpic
+      summary: Create a new epic
+      tags: [Epics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEpicRequest'
+      responses:
+        '201':
+          description: Epic created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Epic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{projectRef}/epics/{epicRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: epicRef
+        in: path
+        required: true
+        description: Epic public ID (epic_xxx) or display key (SPEC-E1)
+        schema:
+          type: string
+
+    get:
+      operationId: getEpic
+      summary: Get an epic
+      tags: [Epics]
+      responses:
+        '200':
+          description: Epic details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Epic'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateEpic
+      summary: Update an epic
+      tags: [Epics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEpicRequest'
+      responses:
+        '200':
+          description: Epic updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Epic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteEpic
+      summary: Delete an epic
+      tags: [Epics]
+      responses:
+        '204':
+          description: Epic deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== TASKS ====================
+  /projects/{projectRef}/tasks:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listTasks
+      summary: List tasks in a project
+      tags: [Tasks]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/OrderParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/TaskPriority'
+        - name: epicRef
+          in: query
+          description: Filter by epic (public ID or display key)
+          schema:
+            type: string
+        - name: assignedToRef
+          in: query
+          description: Filter by assignee (user public ID)
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Search in title and description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createTask
+      summary: Create a new task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{projectRef}/tasks/{taskRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: taskRef
+        in: path
+        required: true
+        description: Task public ID (task_xxx) or display key (SPEC-42)
+        schema:
+          type: string
+
+    get:
+      operationId: getTask
+      summary: Get a task
+      tags: [Tasks]
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateTask
+      summary: Partially update a task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteTask
+      summary: Delete a task
+      tags: [Tasks]
+      responses:
+        '204':
+          description: Task deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    CursorParam:
+      name: cursor
+      in: query
+      description: Base64-encoded pagination cursor
+      schema:
+        type: string
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Items per page (default 20, max 100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SortParam:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [created_at, updated_at, title]
+        default: created_at
+
+    OrderParam:
+      name: order
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # Common
+    ErrorResponse:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    CursorPagination:
+      type: object
+      properties:
+        nextCursor:
+          type: string
+          nullable: true
+        prevCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+        total:
+          type: integer
+          format: int64
+
+    # Project
+    Project:
+      type: object
+      required: [publicId, projectKey, name, ownerId, createdAt, updatedAt]
+      properties:
+        publicId:
+          type: string
+        projectKey:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        ownerId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateProjectRequest:
+      type: object
+      required: [projectKey, name]
+      properties:
+        projectKey:
+          type: string
+          minLength: 2
+          maxLength: 10
+          pattern: '^[A-Z0-9]+$'
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+
+    ProjectListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        pagination:
+          $ref: '#/components/schemas/CursorPagination'
+
+    # Epic
+    EpicStatus:
+      type: string
+      enum: [PLANNING, IN_PROGRESS, BLOCKED, COMPLETED, CANCELLED]
+
+    Epic:
+      type: object
+      required: [publicId, displayKey, projectId, title, status, createdById, createdAt, updatedAt]
+      properties:
+        publicId:
+          type: string
+        displayKey:
+          type: string
+        projectId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/EpicStatus'
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+        createdById:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateEpicRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+
+    UpdateEpicRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/EpicStatus'
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+
+    EpicListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Epic'
+        pagination:
+          $ref: '#/components/schemas/CursorPagination'
+
+    # Task
+    TaskStatus:
+      type: string
+      enum: [BACKLOG, READY, IN_PROGRESS, IN_REVIEW, BLOCKED, COMPLETED, CANCELLED]
+
+    TaskPriority:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    Task:
+      type: object
+      required: [publicId, displayKey, projectId, title, status, priority, requiresApproval, createdById, createdAt, updatedAt]
+      properties:
+        publicId:
+          type: string
+        displayKey:
+          type: string
+        projectId:
+          type: string
+        epicId:
+          type: string
+          nullable: true
+        epicDisplayKey:
+          type: string
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        requiresApproval:
+          type: boolean
+        estimatedDuration:
+          type: integer
+          nullable: true
+        actualDuration:
+          type: integer
+          nullable: true
+        githubPrUrl:
+          type: string
+          nullable: true
+        createdById:
+          type: string
+        assignedToId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTaskRequest:
+      type: object
+      required: [title]
+      properties:
+        epicRef:
+          type: string
+          nullable: true
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        requiresApproval:
+          type: boolean
+          default: true
+        estimatedDuration:
+          type: integer
+          nullable: true
+        assignedToRef:
+          type: string
+          nullable: true
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        epicRef:
+          type: string
+          nullable: true
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        requiresApproval:
+          type: boolean
+        estimatedDuration:
+          type: integer
+          nullable: true
+        actualDuration:
+          type: integer
+          nullable: true
+        githubPrUrl:
+          type: string
+          nullable: true
+        assignedToRef:
+          type: string
+          nullable: true
+
+    TaskListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        pagination:
+          $ref: '#/components/schemas/CursorPagination'
