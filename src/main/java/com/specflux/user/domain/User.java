@@ -9,10 +9,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /** User aggregate root representing a Firebase-authenticated user. */
 @Entity
@@ -34,9 +36,11 @@ public class User extends AggregateRoot<Long> {
   @Column(nullable = false)
   private String email;
 
+  @Setter
   @Column(name = "display_name", nullable = false)
   private String displayName;
 
+  @Setter
   @Column(name = "avatar_url", length = 500)
   private String avatarUrl;
 
@@ -55,13 +59,8 @@ public class User extends AggregateRoot<Long> {
     this.updatedAt = Instant.now();
   }
 
-  public void setDisplayName(String displayName) {
-    this.displayName = displayName;
-    this.updatedAt = Instant.now();
-  }
-
-  public void setAvatarUrl(String avatarUrl) {
-    this.avatarUrl = avatarUrl;
+  @PreUpdate
+  protected void onUpdate() {
     this.updatedAt = Instant.now();
   }
 }
