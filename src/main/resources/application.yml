@@ -27,3 +27,8 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+
+# Firebase Authentication
+firebase:
+  enabled: ${FIREBASE_ENABLED:true}
+  config-path: ${FIREBASE_CONFIG_PATH:}
