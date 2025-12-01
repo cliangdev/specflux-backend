@@ -4,18 +4,22 @@ Spring Boot backend for SpecFlux - AI-Powered Multi-Repo Development Orchestrato
 
 ## Prerequisites
 
-- **Java 25**
+- **Java 25** (Temurin recommended)
 - **Maven 3.9+**
-- **PostgreSQL 15+** (for development/production)
+- **PostgreSQL 18.1** (for development/production)
+
+### Java Installation (asdf)
+
+```bash
+asdf install java temurin-25.0.1+8.0.LTS
+asdf set java temurin-25.0.1+8.0.LTS
+```
 
 ## Tech Stack
 
 - Spring Boot 4.0.0
 - Maven
 - PostgreSQL
-- Lombok
-- Springdoc OpenAPI
-- Spotless (code formatting)
 
 ## Project Structure
 
