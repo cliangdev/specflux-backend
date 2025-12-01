@@ -1,4 +1,11 @@
 # Development Profile Configuration
+
+# Firebase Emulator enabled for local development
+firebase:
+  emulator:
+    enabled: true
+    host: localhost:9099
+
 spring:
   # Database (PostgreSQL)
   datasource:

@@ -24,3 +24,7 @@ springdoc:
     enabled: false
   api-docs:
     enabled: false
+
+# Firebase - disable in tests
+firebase:
+  enabled: false
