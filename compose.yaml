@@ -25,7 +25,6 @@ services:
     container_name: specflux-firebase-emulator
     ports:
       - "9099:9099"   # Auth emulator
-      - "4000:4000"   # Emulator UI
     volumes:
       - ./firebase:/home/node/firebase
     command: firebase emulators:start --only auth --project demo-specflux
