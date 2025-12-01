@@ -1,12 +1,14 @@
 # Test Profile Configuration
 spring:
-  # Database - Testcontainers will provide PostgreSQL
-  # datasource:
-  #   url: jdbc:tc:postgresql:15:///specflux_test
-  #   driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-  # jpa:
-  #   hibernate:
-  #     ddl-auto: create-drop
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  docker:
+    compose:
+      enabled: false
 
 # Logging - reduce noise in tests
 logging:

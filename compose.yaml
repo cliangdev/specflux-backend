@@ -1,0 +1,25 @@
+# Docker Compose for local development
+# Spring Boot auto-starts this when running: mvn spring-boot:run
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: specflux-postgres
+    environment:
+      POSTGRES_DB: specflux_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      # PostgreSQL 18+ uses /var/lib/postgresql (not /data subdirectory)
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d specflux_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: specflux-postgres-data
