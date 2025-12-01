@@ -5,7 +5,9 @@
       "host": "0.0.0.0"
     },
     "ui": {
-      "enabled": false
+      "enabled": true,
+      "port": 4000,
+      "host": "0.0.0.0"
     }
   }
 }

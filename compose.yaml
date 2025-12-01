@@ -25,10 +25,19 @@ services:
     container_name: specflux-firebase-emulator
     ports:
       - "9099:9099"   # Auth emulator
+      - "4000:4000"   # Emulator UI
+      - "4400:4400"   # Emulator Hub
     volumes:
       - ./firebase:/home/node/firebase
+      - ./firebase/cache:/home/node/.cache/firebase
     command: firebase emulators:start --only auth --project demo-specflux
     working_dir: /home/node/firebase
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9099/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   postgres_data:
