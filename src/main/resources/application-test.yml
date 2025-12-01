@@ -1,0 +1,24 @@
+# Test Profile Configuration
+spring:
+  # Database - Testcontainers will provide PostgreSQL
+  # datasource:
+  #   url: jdbc:tc:postgresql:15:///specflux_test
+  #   driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: create-drop
+
+# Logging - reduce noise in tests
+logging:
+  level:
+    root: WARN
+    com.specflux: INFO
+    org.springframework.test: WARN
+    org.testcontainers: WARN
+
+# Springdoc - disable in tests
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false

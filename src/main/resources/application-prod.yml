@@ -1,0 +1,36 @@
+# Production Profile Configuration
+spring:
+  # Database (PostgreSQL) - use environment variables
+  # datasource:
+  #   url: ${DATABASE_URL}
+  #   username: ${DATABASE_USERNAME}
+  #   password: ${DATABASE_PASSWORD}
+  #   driver-class-name: org.postgresql.Driver
+  #   hikari:
+  #     maximum-pool-size: 10
+  #     minimum-idle: 5
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: validate
+  #   show-sql: false
+
+# Logging - production levels
+logging:
+  level:
+    root: WARN
+    com.specflux: INFO
+    org.springframework: WARN
+
+# Springdoc - disable in production (use separate API docs deployment)
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+# Actuator - restrict in production
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
