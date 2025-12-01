@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 env:
-  JAVA_VERSION: '25-ea'
-  JAVA_DISTRIBUTION: 'oracle'
+  JAVA_VERSION: '25'
+  JAVA_DISTRIBUTION: 'temurin'
 
 jobs:
   # Fast checks that can fail early
