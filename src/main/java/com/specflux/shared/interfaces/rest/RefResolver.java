@@ -89,15 +89,11 @@ public class RefResolver {
           .orElseThrow(() -> new EntityNotFoundException("Epic not found: " + ref));
     }
 
-    // Parse as display key (e.g., PROJ-E1)
-    try {
-      DisplayKey displayKey = DisplayKey.parse(ref);
-      return epicRepository
-          .findByProjectIdAndDisplayKey(project.getId(), ref)
-          .orElseThrow(() -> new EntityNotFoundException("Epic not found: " + ref));
-    } catch (IllegalArgumentException e) {
-      throw new EntityNotFoundException("Epic not found: " + ref);
-    }
+    // Treat as display key (e.g., PROJ-E1)
+    // Note: Epic display keys have format PROJECT-E{number}, not PROJECT-{number}
+    return epicRepository
+        .findByProjectIdAndDisplayKey(project.getId(), ref)
+        .orElseThrow(() -> new EntityNotFoundException("Epic not found: " + ref));
   }
 
   /**
