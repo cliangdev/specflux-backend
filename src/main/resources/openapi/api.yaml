@@ -772,6 +772,137 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # ==================== EPIC TASKS ====================
+  /projects/{projectRef}/epics/{epicRef}/tasks:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: epicRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listEpicTasks
+      summary: List tasks in an epic
+      tags: [Epics]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: Filter by task status
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+      responses:
+        '200':
+          description: List of tasks in the epic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== EPIC DEPENDENCIES ====================
+  /projects/{projectRef}/epics/{epicRef}/dependencies:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: epicRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listEpicDependencies
+      summary: List epics this epic depends on
+      tags: [Epics]
+      responses:
+        '200':
+          description: List of dependency epics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EpicListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: addEpicDependency
+      summary: Add a dependency to an epic
+      tags: [Epics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dependsOnEpicRef:
+                  type: string
+                  description: Public ID or display key of the epic to depend on
+              required:
+                - dependsOnEpicRef
+      responses:
+        '201':
+          description: Dependency added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Epic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /projects/{projectRef}/epics/{epicRef}/dependencies/{depEpicRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: epicRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: depEpicRef
+        in: path
+        required: true
+        description: Dependency epic public ID or display key
+        schema:
+          type: string
+
+    delete:
+      operationId: removeEpicDependency
+      summary: Remove a dependency from an epic
+      tags: [Epics]
+      responses:
+        '204':
+          description: Dependency removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ==================== RELEASES ====================
   /projects/{projectRef}/releases:
     parameters:
@@ -1136,6 +1267,23 @@ components:
       type: string
       enum: [PLANNING, IN_PROGRESS, BLOCKED, COMPLETED, CANCELLED]
 
+    TaskStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        done:
+          type: integer
+        inProgress:
+          type: integer
+        backlog:
+          type: integer
+      required:
+        - total
+        - done
+        - inProgress
+        - backlog
+
     Epic:
       type: object
       required: [publicId, displayKey, projectId, title, status, createdById, createdAt, updatedAt]
@@ -1146,6 +1294,10 @@ components:
           type: string
         projectId:
           type: string
+        releaseId:
+          type: string
+          nullable: true
+          description: Public ID of the associated release
         title:
           type: string
         description:
@@ -1157,6 +1309,30 @@ components:
           type: string
           format: date
           nullable: true
+        prdFilePath:
+          type: string
+          nullable: true
+          description: Path to the PRD document
+        epicFilePath:
+          type: string
+          nullable: true
+          description: Path to the epic document
+        dependsOn:
+          type: array
+          items:
+            type: string
+          description: List of epic public IDs this epic depends on
+        phase:
+          type: integer
+          minimum: 1
+          description: Computed phase based on dependency depth
+        taskStats:
+          $ref: '#/components/schemas/TaskStats'
+        progressPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Completion percentage based on task completion
         createdById:
           type: string
         createdAt:
@@ -1180,6 +1356,15 @@ components:
           type: string
           format: date
           nullable: true
+        releaseRef:
+          type: string
+          nullable: true
+          description: Release publicId or displayKey to assign
+        prdFilePath:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Path to the PRD document
 
     UpdateEpicRequest:
       type: object
@@ -1196,6 +1381,15 @@ components:
           type: string
           format: date
           nullable: true
+        releaseRef:
+          type: string
+          nullable: true
+          description: Release publicId or displayKey to assign
+        prdFilePath:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Path to the PRD document
 
     EpicListResponse:
       type: object

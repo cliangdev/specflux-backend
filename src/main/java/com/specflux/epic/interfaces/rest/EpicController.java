@@ -8,11 +8,14 @@ import com.specflux.acceptancecriteria.application.AcceptanceCriteriaApplication
 import com.specflux.api.generated.EpicsApi;
 import com.specflux.api.generated.model.AcceptanceCriteriaDto;
 import com.specflux.api.generated.model.AcceptanceCriteriaListResponseDto;
+import com.specflux.api.generated.model.AddEpicDependencyRequestDto;
 import com.specflux.api.generated.model.CreateAcceptanceCriteriaRequestDto;
 import com.specflux.api.generated.model.CreateEpicRequestDto;
 import com.specflux.api.generated.model.EpicDto;
 import com.specflux.api.generated.model.EpicListResponseDto;
 import com.specflux.api.generated.model.EpicStatusDto;
+import com.specflux.api.generated.model.TaskListResponseDto;
+import com.specflux.api.generated.model.TaskStatusDto;
 import com.specflux.api.generated.model.UpdateAcceptanceCriteriaRequestDto;
 import com.specflux.api.generated.model.UpdateEpicRequestDto;
 import com.specflux.epic.application.EpicApplicationService;
@@ -110,6 +113,42 @@ public class EpicController implements EpicsApi {
       String projectRef, String epicRef, Long criteriaId) {
     acceptanceCriteriaApplicationService.deleteEpicAcceptanceCriteria(
         projectRef, epicRef, criteriaId);
+    return ResponseEntity.noContent().build();
+  }
+
+  // ==================== TASKS ====================
+
+  @Override
+  public ResponseEntity<TaskListResponseDto> listEpicTasks(
+      String projectRef, String epicRef, String cursor, Integer limit, TaskStatusDto status) {
+    String statusStr = status != null ? status.name() : null;
+    TaskListResponseDto response =
+        epicApplicationService.listEpicTasks(projectRef, epicRef, cursor, limit, statusStr);
+    return ResponseEntity.ok(response);
+  }
+
+  // ==================== DEPENDENCIES ====================
+
+  @Override
+  public ResponseEntity<EpicListResponseDto> listEpicDependencies(
+      String projectRef, String epicRef) {
+    EpicListResponseDto response = epicApplicationService.listEpicDependencies(projectRef, epicRef);
+    return ResponseEntity.ok(response);
+  }
+
+  @Override
+  public ResponseEntity<EpicDto> addEpicDependency(
+      String projectRef, String epicRef, AddEpicDependencyRequestDto request) {
+    EpicDto result =
+        epicApplicationService.addEpicDependency(
+            projectRef, epicRef, request.getDependsOnEpicRef());
+    return ResponseEntity.status(HttpStatus.CREATED).body(result);
+  }
+
+  @Override
+  public ResponseEntity<Void> removeEpicDependency(
+      String projectRef, String epicRef, String depEpicRef) {
+    epicApplicationService.removeEpicDependency(projectRef, epicRef, depEpicRef);
     return ResponseEntity.noContent().build();
   }
 }

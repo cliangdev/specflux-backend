@@ -73,3 +73,6 @@ application-local.properties
 
 # claude
 CLAUDE.md
+
+# Firebase emulator data
+firebase/data/
