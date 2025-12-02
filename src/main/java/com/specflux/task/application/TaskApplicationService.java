@@ -12,8 +12,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.specflux.api.generated.model.AddTaskDependencyRequestDto;
 import com.specflux.api.generated.model.CreateTaskRequestDto;
 import com.specflux.api.generated.model.CursorPaginationDto;
+import com.specflux.api.generated.model.TaskDependencyDto;
+import com.specflux.api.generated.model.TaskDependencyListResponseDto;
 import com.specflux.api.generated.model.TaskDto;
 import com.specflux.api.generated.model.TaskListResponseDto;
 import com.specflux.api.generated.model.TaskPriorityDto;
@@ -24,6 +27,8 @@ import com.specflux.project.domain.Project;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.shared.interfaces.rest.RefResolver;
 import com.specflux.task.domain.Task;
+import com.specflux.task.domain.TaskDependency;
+import com.specflux.task.domain.TaskDependencyRepository;
 import com.specflux.task.domain.TaskPriority;
 import com.specflux.task.domain.TaskRepository;
 import com.specflux.task.interfaces.rest.TaskMapper;
@@ -37,6 +42,7 @@ import lombok.RequiredArgsConstructor;
 public class TaskApplicationService {
 
   private final TaskRepository taskRepository;
+  private final TaskDependencyRepository taskDependencyRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
   private final TransactionTemplate transactionTemplate;
@@ -264,6 +270,90 @@ public class TaskApplicationService {
 
     response.setPagination(pagination);
     return response;
+  }
+
+  /**
+   * Lists dependencies for a task.
+   *
+   * @param projectRef the project reference
+   * @param taskRef the task reference
+   * @return the list of task dependencies
+   */
+  public TaskDependencyListResponseDto listTaskDependencies(String projectRef, String taskRef) {
+    Project project = refResolver.resolveProject(projectRef);
+    Task task = refResolver.resolveTask(project, taskRef);
+
+    List<TaskDependency> dependencies = taskDependencyRepository.findByTaskId(task.getId());
+
+    TaskDependencyListResponseDto response = new TaskDependencyListResponseDto();
+    response.setData(
+        dependencies.stream()
+            .map(
+                dep -> {
+                  TaskDependencyDto dto = new TaskDependencyDto();
+                  dto.setTaskId(dep.getTask().getPublicId());
+                  dto.setDependsOnTaskId(dep.getDependsOnTask().getPublicId());
+                  dto.setDependsOnDisplayKey(dep.getDependsOnTask().getDisplayKey());
+                  dto.setCreatedAt(dep.getCreatedAt().atOffset(java.time.ZoneOffset.UTC));
+                  return dto;
+                })
+            .toList());
+    return response;
+  }
+
+  /**
+   * Adds a dependency to a task.
+   *
+   * @param projectRef the project reference
+   * @param taskRef the task reference
+   * @param request the add dependency request
+   * @return the created task dependency DTO
+   */
+  public TaskDependencyDto addTaskDependency(
+      String projectRef, String taskRef, AddTaskDependencyRequestDto request) {
+    Project project = refResolver.resolveProject(projectRef);
+    Task task = refResolver.resolveTask(project, taskRef);
+    Task dependsOnTask = refResolver.resolveTask(project, request.getDependsOnTaskRef());
+
+    // Check if dependency already exists
+    if (taskDependencyRepository.existsByTaskIdAndDependsOnTaskId(
+        task.getId(), dependsOnTask.getId())) {
+      throw new IllegalStateException("Dependency already exists");
+    }
+
+    TaskDependency dependency = new TaskDependency(task, dependsOnTask);
+    TaskDependency saved =
+        transactionTemplate.execute(_ -> taskDependencyRepository.save(dependency));
+
+    TaskDependencyDto dto = new TaskDependencyDto();
+    dto.setTaskId(saved.getTask().getPublicId());
+    dto.setDependsOnTaskId(saved.getDependsOnTask().getPublicId());
+    dto.setDependsOnDisplayKey(saved.getDependsOnTask().getDisplayKey());
+    dto.setCreatedAt(saved.getCreatedAt().atOffset(java.time.ZoneOffset.UTC));
+    return dto;
+  }
+
+  /**
+   * Removes a dependency from a task.
+   *
+   * @param projectRef the project reference
+   * @param taskRef the task reference
+   * @param dependsOnTaskRef the task reference that this task depends on
+   */
+  public void removeTaskDependency(String projectRef, String taskRef, String dependsOnTaskRef) {
+    Project project = refResolver.resolveProject(projectRef);
+    Task task = refResolver.resolveTask(project, taskRef);
+    Task dependsOnTask = refResolver.resolveTask(project, dependsOnTaskRef);
+
+    TaskDependency dependency =
+        taskDependencyRepository
+            .findByTaskIdAndDependsOnTaskId(task.getId(), dependsOnTask.getId())
+            .orElseThrow(
+                () ->
+                    new jakarta.persistence.EntityNotFoundException(
+                        "Dependency not found between " + taskRef + " and " + dependsOnTaskRef));
+
+    transactionTemplate.executeWithoutResult(_ -> taskDependencyRepository.delete(dependency));
   }
 
   private Comparator<Task> getComparator(String field) {

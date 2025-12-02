@@ -18,6 +18,8 @@ tags:
     description: Epic management endpoints
   - name: Tasks
     description: Task management endpoints
+  - name: Releases
+    description: Release/milestone management endpoints
 
 paths:
   # ==================== PROJECTS ====================
@@ -393,6 +395,470 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # ==================== TASK DEPENDENCIES ====================
+  /projects/{projectRef}/tasks/{taskRef}/dependencies:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: taskRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listTaskDependencies
+      summary: List dependencies for a task
+      description: Returns tasks that this task depends on (blockers)
+      tags: [Tasks]
+      responses:
+        '200':
+          description: List of task dependencies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDependencyListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: addTaskDependency
+      summary: Add a dependency to a task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTaskDependencyRequest'
+      responses:
+        '201':
+          description: Dependency added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDependency'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /projects/{projectRef}/tasks/{taskRef}/dependencies/{dependsOnTaskRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: taskRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dependsOnTaskRef
+        in: path
+        required: true
+        description: Task reference that this task depends on
+        schema:
+          type: string
+
+    delete:
+      operationId: removeTaskDependency
+      summary: Remove a dependency from a task
+      tags: [Tasks]
+      responses:
+        '204':
+          description: Dependency removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== TASK ACCEPTANCE CRITERIA ====================
+  /projects/{projectRef}/tasks/{taskRef}/acceptance-criteria:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: taskRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listTaskAcceptanceCriteria
+      summary: List acceptance criteria for a task
+      tags: [Tasks]
+      responses:
+        '200':
+          description: List of acceptance criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteriaListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createTaskAcceptanceCriteria
+      summary: Add acceptance criteria to a task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAcceptanceCriteriaRequest'
+      responses:
+        '201':
+          description: Acceptance criteria created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteria'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: taskRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: criteriaId
+        in: path
+        required: true
+        description: Acceptance criteria ID
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      operationId: getTaskAcceptanceCriteria
+      summary: Get a specific acceptance criteria for a task
+      tags: [Tasks]
+      responses:
+        '200':
+          description: Acceptance criteria details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteria'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateTaskAcceptanceCriteria
+      summary: Update acceptance criteria for a task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAcceptanceCriteriaRequest'
+      responses:
+        '200':
+          description: Acceptance criteria updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteria'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteTaskAcceptanceCriteria
+      summary: Delete acceptance criteria from a task
+      tags: [Tasks]
+      responses:
+        '204':
+          description: Acceptance criteria deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== EPIC ACCEPTANCE CRITERIA ====================
+  /projects/{projectRef}/epics/{epicRef}/acceptance-criteria:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: epicRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listEpicAcceptanceCriteria
+      summary: List acceptance criteria for an epic
+      tags: [Epics]
+      responses:
+        '200':
+          description: List of acceptance criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteriaListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createEpicAcceptanceCriteria
+      summary: Add acceptance criteria to an epic
+      tags: [Epics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAcceptanceCriteriaRequest'
+      responses:
+        '201':
+          description: Acceptance criteria created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteria'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: epicRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: criteriaId
+        in: path
+        required: true
+        description: Acceptance criteria ID
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      operationId: getEpicAcceptanceCriteria
+      summary: Get a specific acceptance criteria for an epic
+      tags: [Epics]
+      responses:
+        '200':
+          description: Acceptance criteria details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteria'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateEpicAcceptanceCriteria
+      summary: Update acceptance criteria for an epic
+      tags: [Epics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAcceptanceCriteriaRequest'
+      responses:
+        '200':
+          description: Acceptance criteria updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCriteria'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteEpicAcceptanceCriteria
+      summary: Delete acceptance criteria from an epic
+      tags: [Epics]
+      responses:
+        '204':
+          description: Acceptance criteria deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== RELEASES ====================
+  /projects/{projectRef}/releases:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listReleases
+      summary: List releases in a project
+      tags: [Releases]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/OrderParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReleaseStatus'
+      responses:
+        '200':
+          description: List of releases
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createRelease
+      summary: Create a new release
+      tags: [Releases]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReleaseRequest'
+      responses:
+        '201':
+          description: Release created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{projectRef}/releases/{releaseRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: releaseRef
+        in: path
+        required: true
+        description: Release public ID (rel_xxx) or display key (SPEC-R1)
+        schema:
+          type: string
+
+    get:
+      operationId: getRelease
+      summary: Get a release
+      tags: [Releases]
+      responses:
+        '200':
+          description: Release details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateRelease
+      summary: Update a release
+      tags: [Releases]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReleaseRequest'
+      responses:
+        '200':
+          description: Release updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteRelease
+      summary: Delete a release
+      tags: [Releases]
+      responses:
+        '204':
+          description: Release deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -758,3 +1224,162 @@ components:
             $ref: '#/components/schemas/Task'
         pagination:
           $ref: '#/components/schemas/CursorPagination'
+
+    # Release
+    ReleaseStatus:
+      type: string
+      enum: [PLANNED, IN_PROGRESS, RELEASED, CANCELLED]
+
+    Release:
+      type: object
+      required: [publicId, displayKey, projectId, name, status, createdAt, updatedAt]
+      properties:
+        publicId:
+          type: string
+        displayKey:
+          type: string
+        projectId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ReleaseStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateReleaseRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+
+    UpdateReleaseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ReleaseStatus'
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+
+    ReleaseListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Release'
+        pagination:
+          $ref: '#/components/schemas/CursorPagination'
+
+    # Task Dependency
+    TaskDependency:
+      type: object
+      required: [taskId, dependsOnTaskId, dependsOnDisplayKey, createdAt]
+      properties:
+        taskId:
+          type: string
+          description: Public ID of the task that has the dependency
+        dependsOnTaskId:
+          type: string
+          description: Public ID of the task that this task depends on
+        dependsOnDisplayKey:
+          type: string
+          description: Display key of the task that this task depends on
+        createdAt:
+          type: string
+          format: date-time
+
+    AddTaskDependencyRequest:
+      type: object
+      required: [dependsOnTaskRef]
+      properties:
+        dependsOnTaskRef:
+          type: string
+          description: Task reference (publicId or displayKey) that this task depends on
+
+    TaskDependencyListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskDependency'
+
+    # Acceptance Criteria
+    AcceptanceCriteria:
+      type: object
+      required: [id, criteria, isMet, orderIndex, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        criteria:
+          type: string
+        isMet:
+          type: boolean
+        orderIndex:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateAcceptanceCriteriaRequest:
+      type: object
+      required: [criteria]
+      properties:
+        criteria:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        orderIndex:
+          type: integer
+          nullable: true
+          description: Order index for display. If not provided, auto-increments based on existing criteria count.
+
+    UpdateAcceptanceCriteriaRequest:
+      type: object
+      properties:
+        criteria:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        isMet:
+          type: boolean
+        orderIndex:
+          type: integer
+
+    AcceptanceCriteriaListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcceptanceCriteria'

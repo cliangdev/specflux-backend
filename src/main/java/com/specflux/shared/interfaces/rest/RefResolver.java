@@ -6,6 +6,8 @@ import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
+import com.specflux.release.domain.Release;
+import com.specflux.release.domain.ReleaseRepository;
 import com.specflux.shared.domain.DisplayKey;
 import com.specflux.task.domain.Task;
 import com.specflux.task.domain.TaskRepository;
@@ -33,6 +35,7 @@ public class RefResolver {
   private final ProjectRepository projectRepository;
   private final EpicRepository epicRepository;
   private final TaskRepository taskRepository;
+  private final ReleaseRepository releaseRepository;
   private final UserRepository userRepository;
 
   /**
@@ -116,6 +119,32 @@ public class RefResolver {
     } catch (IllegalArgumentException e) {
       throw new EntityNotFoundException("Task not found: " + ref);
     }
+  }
+
+  /**
+   * Resolves a release reference to a Release entity within a project.
+   *
+   * @param project The parent project
+   * @param ref Release public ID (rel_xxx) or display key (PROJ-R1)
+   * @return The resolved Release
+   * @throws EntityNotFoundException if release not found
+   */
+  public Release resolveRelease(Project project, String ref) {
+    if (ref == null || ref.isBlank()) {
+      throw new IllegalArgumentException("Release reference is required");
+    }
+
+    // Check if it's a public ID (starts with "rel_")
+    if (ref.startsWith("rel_")) {
+      return releaseRepository
+          .findByPublicIdAndProjectId(ref, project.getId())
+          .orElseThrow(() -> new EntityNotFoundException("Release not found: " + ref));
+    }
+
+    // Treat as display key (e.g., PROJ-R1)
+    return releaseRepository
+        .findByProjectIdAndDisplayKey(project.getId(), ref)
+        .orElseThrow(() -> new EntityNotFoundException("Release not found: " + ref));
   }
 
   /**

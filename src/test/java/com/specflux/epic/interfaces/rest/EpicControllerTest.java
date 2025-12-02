@@ -11,8 +11,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import com.specflux.api.generated.model.CreateAcceptanceCriteriaRequestDto;
 import com.specflux.api.generated.model.CreateEpicRequestDto;
 import com.specflux.api.generated.model.EpicStatusDto;
+import com.specflux.api.generated.model.UpdateAcceptanceCriteriaRequestDto;
 import com.specflux.api.generated.model.UpdateEpicRequestDto;
 import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.epic.domain.Epic;
@@ -321,6 +323,246 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
             post("/projects/{projectRef}/epics", testProject.getPublicId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isForbidden());
+  }
+
+  // ==================== EPIC ACCEPTANCE CRITERIA TESTS ====================
+
+  @Test
+  void createEpicAcceptanceCriteria_shouldReturnCreatedCriteria() throws Exception {
+    Epic epic =
+        epicRepository.save(new Epic("epic_ac1", testProject, 1, "EPIC-E1", "Test Epic", testUser));
+
+    CreateAcceptanceCriteriaRequestDto request = new CreateAcceptanceCriteriaRequestDto();
+    request.setCriteria("All user stories must be implemented");
+    request.setOrderIndex(0);
+
+    mockMvc
+        .perform(
+            post(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    testProject.getPublicId(),
+                    epic.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").exists())
+        .andExpect(jsonPath("$.criteria").value("All user stories must be implemented"))
+        .andExpect(jsonPath("$.isMet").value(false))
+        .andExpect(jsonPath("$.orderIndex").value(0))
+        .andExpect(jsonPath("$.createdAt").exists());
+  }
+
+  @Test
+  void listEpicAcceptanceCriteria_shouldReturnOrderedList() throws Exception {
+    Epic epic =
+        epicRepository.save(new Epic("epic_ac2", testProject, 1, "EPIC-E1", "Test Epic", testUser));
+
+    // Create criteria
+    CreateAcceptanceCriteriaRequestDto request1 = new CreateAcceptanceCriteriaRequestDto();
+    request1.setCriteria("First criterion");
+    request1.setOrderIndex(0);
+    mockMvc
+        .perform(
+            post(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    testProject.getPublicId(),
+                    epic.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request1)))
+        .andExpect(status().isCreated());
+
+    CreateAcceptanceCriteriaRequestDto request2 = new CreateAcceptanceCriteriaRequestDto();
+    request2.setCriteria("Second criterion");
+    request2.setOrderIndex(1);
+    mockMvc
+        .perform(
+            post(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    testProject.getPublicId(),
+                    epic.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request2)))
+        .andExpect(status().isCreated());
+
+    // List should return in order
+    mockMvc
+        .perform(
+            get(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    testProject.getPublicId(),
+                    epic.getPublicId())
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data").isArray())
+        .andExpect(jsonPath("$.data.length()").value(2))
+        .andExpect(jsonPath("$.data[0].criteria").value("First criterion"))
+        .andExpect(jsonPath("$.data[1].criteria").value("Second criterion"));
+  }
+
+  @Test
+  void getEpicAcceptanceCriteria_shouldReturnCriteria() throws Exception {
+    Epic epic =
+        epicRepository.save(new Epic("epic_ac3", testProject, 1, "EPIC-E1", "Test Epic", testUser));
+
+    // Create criteria
+    CreateAcceptanceCriteriaRequestDto request = new CreateAcceptanceCriteriaRequestDto();
+    request.setCriteria("Test epic criterion");
+
+    String response =
+        mockMvc
+            .perform(
+                post(
+                        "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                        testProject.getPublicId(),
+                        epic.getPublicId())
+                    .with(user("user"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    Long criteriaId = objectMapper.readTree(response).get("id").asLong();
+
+    // Get the specific criteria
+    mockMvc
+        .perform(
+            get(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    testProject.getPublicId(),
+                    epic.getPublicId(),
+                    criteriaId)
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(criteriaId))
+        .andExpect(jsonPath("$.criteria").value("Test epic criterion"));
+  }
+
+  @Test
+  void updateEpicAcceptanceCriteria_shouldUpdateFields() throws Exception {
+    Epic epic =
+        epicRepository.save(new Epic("epic_ac4", testProject, 1, "EPIC-E1", "Test Epic", testUser));
+
+    // Create criteria
+    CreateAcceptanceCriteriaRequestDto createRequest = new CreateAcceptanceCriteriaRequestDto();
+    createRequest.setCriteria("Original criterion");
+
+    String response =
+        mockMvc
+            .perform(
+                post(
+                        "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                        testProject.getPublicId(),
+                        epic.getPublicId())
+                    .with(user("user"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(createRequest)))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    Long criteriaId = objectMapper.readTree(response).get("id").asLong();
+
+    // Update criteria
+    UpdateAcceptanceCriteriaRequestDto updateRequest = new UpdateAcceptanceCriteriaRequestDto();
+    updateRequest.setCriteria("Updated criterion");
+    updateRequest.setIsMet(true);
+
+    mockMvc
+        .perform(
+            put(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    testProject.getPublicId(),
+                    epic.getPublicId(),
+                    criteriaId)
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateRequest)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(criteriaId))
+        .andExpect(jsonPath("$.criteria").value("Updated criterion"))
+        .andExpect(jsonPath("$.isMet").value(true));
+  }
+
+  @Test
+  void deleteEpicAcceptanceCriteria_shouldDeleteCriteria() throws Exception {
+    Epic epic =
+        epicRepository.save(new Epic("epic_ac5", testProject, 1, "EPIC-E1", "Test Epic", testUser));
+
+    // Create criteria
+    CreateAcceptanceCriteriaRequestDto createRequest = new CreateAcceptanceCriteriaRequestDto();
+    createRequest.setCriteria("To be deleted");
+
+    String response =
+        mockMvc
+            .perform(
+                post(
+                        "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                        testProject.getPublicId(),
+                        epic.getPublicId())
+                    .with(user("user"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(createRequest)))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    Long criteriaId = objectMapper.readTree(response).get("id").asLong();
+
+    // Delete criteria
+    mockMvc
+        .perform(
+            delete(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    testProject.getPublicId(),
+                    epic.getPublicId(),
+                    criteriaId)
+                .with(user("user")))
+        .andExpect(status().isNoContent());
+
+    // Verify deletion
+    mockMvc
+        .perform(
+            get(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    testProject.getPublicId(),
+                    epic.getPublicId(),
+                    criteriaId)
+                .with(user("user")))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void getEpicAcceptanceCriteria_notFound_shouldReturn404() throws Exception {
+    Epic epic =
+        epicRepository.save(new Epic("epic_ac6", testProject, 1, "EPIC-E1", "Test Epic", testUser));
+
+    mockMvc
+        .perform(
+            get(
+                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    testProject.getPublicId(),
+                    epic.getPublicId(),
+                    999999L)
+                .with(user("user")))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void listEpicAcceptanceCriteria_withoutAuth_shouldReturn403() throws Exception {
+    mockMvc
+        .perform(
+            get(
+                "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                testProject.getPublicId(),
+                "epic_123"))
         .andExpect(status().isForbidden());
   }
 }

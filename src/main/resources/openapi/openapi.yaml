@@ -22,6 +22,8 @@ tags:
     description: Epic management endpoints (scoped to projects)
   - name: Tasks
     description: Task management endpoints (scoped to projects)
+  - name: Releases
+    description: Release/milestone management endpoints (scoped to projects)
 
 paths:
   # Project endpoints
@@ -41,6 +43,12 @@ paths:
     $ref: './tasks.yaml#/paths/~1projects~1{projectRef}~1tasks'
   /projects/{projectRef}/tasks/{taskRef}:
     $ref: './tasks.yaml#/paths/~1projects~1{projectRef}~1tasks~1{taskRef}'
+
+  # Release endpoints
+  /projects/{projectRef}/releases:
+    $ref: './releases.yaml#/paths/~1projects~1{projectRef}~1releases'
+  /projects/{projectRef}/releases/{releaseRef}:
+    $ref: './releases.yaml#/paths/~1projects~1{projectRef}~1releases~1{releaseRef}'
 
 components:
   securitySchemes:

@@ -336,3 +336,89 @@ components:
             $ref: '#/components/schemas/Task'
         pagination:
           $ref: '#/components/schemas/CursorPagination'
+
+    # Release
+    ReleaseStatus:
+      type: string
+      enum: [PLANNED, IN_PROGRESS, RELEASED, CANCELLED]
+
+    Release:
+      type: object
+      properties:
+        publicId:
+          type: string
+          example: "rel_abc123xyz789"
+        displayKey:
+          type: string
+          example: "SPEC-R1"
+        projectId:
+          type: string
+          example: "proj_abc123"
+        name:
+          type: string
+          example: "v1.0.0"
+        description:
+          type: string
+          nullable: true
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ReleaseStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - publicId
+        - displayKey
+        - projectId
+        - name
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateReleaseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+      required:
+        - name
+
+    UpdateReleaseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ReleaseStatus'
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+
+    ReleaseListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Release'
+        pagination:
+          $ref: '#/components/schemas/CursorPagination'
