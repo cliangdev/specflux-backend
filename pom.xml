@@ -161,6 +161,10 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <!-- Set Firebase Emulator env var for local development -->
+                    <environmentVariables>
+                        <FIREBASE_AUTH_EMULATOR_HOST>localhost:9099</FIREBASE_AUTH_EMULATOR_HOST>
+                    </environmentVariables>
                 </configuration>
             </plugin>
 

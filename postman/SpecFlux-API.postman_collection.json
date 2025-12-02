@@ -1,0 +1,380 @@
+{
+  "info": {
+    "_postman_id": "specflux-api-collection",
+    "name": "SpecFlux API",
+    "description": "REST API for SpecFlux - AI-Powered Multi-Repo Development Orchestrator.\n\n## Authentication\nAll API endpoints require Firebase JWT authentication. Use the \"1. Authentication\" folder to get a token first.\n\n## Usage\n1. Import this collection and the environment file\n2. Run \"Get Firebase Token\" to authenticate\n3. The token is automatically saved to the environment\n4. All other requests will use the token automatically",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{baseUrl}}"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "description": "Firebase authentication flow. Run these first to get a token.",
+      "item": [
+        {
+          "name": "Get Firebase Token (Emulator)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.idToken) {",
+                  "        pm.environment.set('authToken', response.idToken);",
+                  "        pm.environment.set('refreshToken', response.refreshToken);",
+                  "        console.log('Token saved to environment');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "http://{{firebaseEmulatorHost}}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key",
+              "protocol": "http",
+              "host": ["{{firebaseEmulatorHost}}"],
+              "path": ["identitytoolkit.googleapis.com", "v1", "accounts:signInWithPassword"],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "fake-api-key"
+                }
+              ]
+            },
+            "description": "Sign in with email/password using Firebase Emulator.\n\n**First Time Setup:**\n1. Create a test user in Firebase Emulator UI (http://localhost:4000/auth)\n2. Update `testEmail` and `testPassword` in the environment\n3. Run this request to get a token"
+          }
+        },
+        {
+          "name": "Create Test User (Emulator)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.idToken) {",
+                  "        pm.environment.set('authToken', response.idToken);",
+                  "        pm.environment.set('refreshToken', response.refreshToken);",
+                  "        console.log('User created and token saved');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "http://{{firebaseEmulatorHost}}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key",
+              "protocol": "http",
+              "host": ["{{firebaseEmulatorHost}}"],
+              "path": ["identitytoolkit.googleapis.com", "v1", "accounts:signUp"],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "fake-api-key"
+                }
+              ]
+            },
+            "description": "Create a new test user in Firebase Emulator. Only needed once."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.id_token) {",
+                  "        pm.environment.set('authToken', response.id_token);",
+                  "        pm.environment.set('refreshToken', response.refresh_token);",
+                  "        console.log('Token refreshed');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grant_type\": \"refresh_token\",\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{firebaseEmulatorHost}}/securetoken.googleapis.com/v1/token?key=fake-api-key",
+              "protocol": "http",
+              "host": ["{{firebaseEmulatorHost}}"],
+              "path": ["securetoken.googleapis.com", "v1", "token"],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "fake-api-key"
+                }
+              ]
+            },
+            "description": "Refresh an expired ID token using the refresh token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. User Profile",
+      "description": "User profile management - get current user, update profile, lookup users.",
+      "item": [
+        {
+          "name": "Get Current User (Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.publicId) {",
+                  "        pm.environment.set('userRef', response.publicId);",
+                  "        console.log('Saved userRef:', response.publicId);",
+                  "    }",
+                  "    pm.test('User has publicId', function() {",
+                  "        pm.expect(response.publicId).to.match(/^usr_/);",
+                  "    });",
+                  "    pm.test('User has email', function() {",
+                  "        pm.expect(response.email).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Get the currently authenticated user's profile.\n\nThis endpoint auto-provisions the user on first call - if the user doesn't exist in the database, it creates them from the Firebase token claims.\n\n**Auto-saves:** `userRef` variable for use in other requests."
+          }
+        },
+        {
+          "name": "Update Current User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"John Doe\",\n  \"avatarUrl\": \"https://example.com/avatar.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Update the current user's display name and/or avatar URL.\n\nBoth fields are optional - only provided fields will be updated."
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userRef}}"]
+            },
+            "description": "Look up a user by their public ID.\n\nUses `userRef` from \"Get Current User\" response. Run that request first to populate the variable."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Projects",
+      "description": "Project management - create, list, update, delete projects.",
+      "item": [
+        {
+          "name": "List Projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all projects for the current user."
+          }
+        },
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectKey\": \"SPEC\",\n  \"name\": \"SpecFlux\",\n  \"description\": \"AI-Powered Multi-Repo Development Orchestrator\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            },
+            "description": "Create a new project.\n\n- `projectKey`: Unique identifier (uppercase, 2-10 chars)\n- `name`: Display name\n- `description`: Optional description"
+          }
+        },
+        {
+          "name": "Get Project",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/:ref",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", ":ref"],
+              "variable": [
+                {
+                  "key": "ref",
+                  "value": "SPEC",
+                  "description": "Project key or public ID"
+                }
+              ]
+            },
+            "description": "Get a project by its key or public ID."
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SpecFlux Updated\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/:ref",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", ":ref"],
+              "variable": [
+                {
+                  "key": "ref",
+                  "value": "SPEC",
+                  "description": "Project key or public ID"
+                }
+              ]
+            },
+            "description": "Update a project's name and/or description."
+          }
+        },
+        {
+          "name": "Delete Project",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/:ref",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", ":ref"],
+              "variable": [
+                {
+                  "key": "ref",
+                  "value": "SPEC",
+                  "description": "Project key or public ID"
+                }
+              ]
+            },
+            "description": "Delete a project."
+          }
+        }
+      ]
+    }
+  ]
+}
