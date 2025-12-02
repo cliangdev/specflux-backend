@@ -4,13 +4,13 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import org.springframework.stereotype.Component;
-
 import com.specflux.api.generated.model.ProjectDto;
 import com.specflux.project.domain.Project;
 
+import lombok.experimental.UtilityClass;
+
 /** Mapper for converting between Project domain entities and API DTOs. */
-@Component
+@UtilityClass
 public class ProjectMapper {
 
   /**

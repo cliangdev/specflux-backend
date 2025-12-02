@@ -39,7 +39,6 @@ public class TaskApplicationService {
   private final TaskRepository taskRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
-  private final TaskMapper taskMapper;
   private final TransactionTemplate transactionTemplate;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -51,40 +50,38 @@ public class TaskApplicationService {
    * @return the created task DTO
    */
   public TaskDto createTask(String projectRef, CreateTaskRequestDto request) {
-      Project project = refResolver.resolveProject(projectRef);
-      User currentUser = currentUserService.getCurrentUser();
+    Project project = refResolver.resolveProject(projectRef);
+    User currentUser = currentUserService.getCurrentUser();
 
-      String publicId = generatePublicId("task");
-      int sequenceNumber = getNextSequenceNumber(project);
-      String displayKey = project.getProjectKey() + "-" + sequenceNumber;
+    String publicId = generatePublicId("task");
+    int sequenceNumber = getNextSequenceNumber(project);
+    String displayKey = project.getProjectKey() + "-" + sequenceNumber;
 
-      Task task =
-              new Task(
-                      publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
-      task.setDescription(request.getDescription());
+    Task task =
+        new Task(publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
+    task.setDescription(request.getDescription());
 
-      // Set optional fields
-      if (request.getEpicRef() != null) {
-          Epic epic = refResolver.resolveEpic(project, request.getEpicRef());
-          task.setEpic(epic);
-      }
-      if (request.getPriority() != null) {
-          task.setPriority(taskMapper.toDomainPriority(request.getPriority()));
-      }
-      if (request.getRequiresApproval() != null) {
-          task.setRequiresApproval(request.getRequiresApproval());
-      }
-      if (request.getEstimatedDuration() != null) {
-          task.setEstimatedDuration(request.getEstimatedDuration());
-      }
-      if (request.getAssignedToRef() != null) {
-          User assignee = refResolver.resolveUser(request.getAssignedToRef());
-          task.setAssignedTo(assignee);
-      }
+    // Set optional fields
+    if (request.getEpicRef() != null) {
+      Epic epic = refResolver.resolveEpic(project, request.getEpicRef());
+      task.setEpic(epic);
+    }
+    if (request.getPriority() != null) {
+      task.setPriority(TaskMapper.toDomainPriority(request.getPriority()));
+    }
+    if (request.getRequiresApproval() != null) {
+      task.setRequiresApproval(request.getRequiresApproval());
+    }
+    if (request.getEstimatedDuration() != null) {
+      task.setEstimatedDuration(request.getEstimatedDuration());
+    }
+    if (request.getAssignedToRef() != null) {
+      User assignee = refResolver.resolveUser(request.getAssignedToRef());
+      task.setAssignedTo(assignee);
+    }
 
-      Task saved = transactionTemplate.execute(
-              _ -> taskRepository.save(task));
-      return taskMapper.toDto(saved);
+    Task saved = transactionTemplate.execute(_ -> taskRepository.save(task));
+    return TaskMapper.toDto(saved);
   }
 
   /**
@@ -97,7 +94,7 @@ public class TaskApplicationService {
   public TaskDto getTask(String projectRef, String taskRef) {
     Project project = refResolver.resolveProject(projectRef);
     Task task = refResolver.resolveTask(project, taskRef);
-    return taskMapper.toDto(task);
+    return TaskMapper.toDto(task);
   }
 
   /**
@@ -119,10 +116,10 @@ public class TaskApplicationService {
       task.setDescription(request.getDescription());
     }
     if (request.getStatus() != null) {
-      task.setStatus(taskMapper.toDomainStatus(request.getStatus()));
+      task.setStatus(TaskMapper.toDomainStatus(request.getStatus()));
     }
     if (request.getPriority() != null) {
-      task.setPriority(taskMapper.toDomainPriority(request.getPriority()));
+      task.setPriority(TaskMapper.toDomainPriority(request.getPriority()));
     }
     if (request.getRequiresApproval() != null) {
       task.setRequiresApproval(request.getRequiresApproval());
@@ -146,7 +143,7 @@ public class TaskApplicationService {
     }
 
     Task saved = transactionTemplate.execute(_ -> taskRepository.save(task));
-    return taskMapper.toDto(saved);
+    return TaskMapper.toDto(saved);
   }
 
   /**
@@ -201,11 +198,11 @@ public class TaskApplicationService {
     Stream<Task> taskStream = allTasks.stream();
 
     if (status != null) {
-      var domainStatus = taskMapper.toDomainStatus(status);
+      var domainStatus = TaskMapper.toDomainStatus(status);
       taskStream = taskStream.filter(t -> t.getStatus() == domainStatus);
     }
     if (priority != null) {
-      TaskPriority domainPriority = taskMapper.toDomainPriority(priority);
+      TaskPriority domainPriority = TaskMapper.toDomainPriority(priority);
       taskStream = taskStream.filter(t -> t.getPriority() == domainPriority);
     }
     if (epicRef != null && !epicRef.isBlank()) {
@@ -250,7 +247,7 @@ public class TaskApplicationService {
 
     // Build response
     TaskListResponseDto response = new TaskListResponseDto();
-    response.setData(resultTasks.stream().map(taskMapper::toDto).toList());
+    response.setData(resultTasks.stream().map(TaskMapper::toDto).toList());
 
     CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);

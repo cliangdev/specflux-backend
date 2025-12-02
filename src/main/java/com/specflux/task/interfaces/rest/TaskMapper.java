@@ -4,8 +4,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import org.springframework.stereotype.Component;
-
 import com.specflux.api.generated.model.TaskDto;
 import com.specflux.api.generated.model.TaskPriorityDto;
 import com.specflux.api.generated.model.TaskStatusDto;
@@ -13,8 +11,10 @@ import com.specflux.task.domain.Task;
 import com.specflux.task.domain.TaskPriority;
 import com.specflux.task.domain.TaskStatus;
 
+import lombok.experimental.UtilityClass;
+
 /** Mapper for converting between Task domain entities and API DTOs. */
-@Component
+@UtilityClass
 public class TaskMapper {
 
   /**

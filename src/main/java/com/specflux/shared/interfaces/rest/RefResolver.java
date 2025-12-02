@@ -1,6 +1,5 @@
 package com.specflux.shared.interfaces.rest;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import com.specflux.epic.domain.Epic;
@@ -14,6 +13,7 @@ import com.specflux.user.domain.User;
 import com.specflux.user.domain.UserRepository;
 
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Resolves path parameters that can be either a public ID or a display key/project key.

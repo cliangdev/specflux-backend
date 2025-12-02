@@ -36,7 +36,6 @@ public class ProjectApplicationService {
   private final ProjectRepository projectRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
-  private final ProjectMapper projectMapper;
   private final TransactionTemplate transactionTemplate;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -63,7 +62,7 @@ public class ProjectApplicationService {
           project.setDescription(request.getDescription());
 
           Project saved = projectRepository.save(project);
-          return projectMapper.toDto(saved);
+          return ProjectMapper.toDto(saved);
         });
   }
 
@@ -75,7 +74,7 @@ public class ProjectApplicationService {
    */
   public ProjectDto getProject(String ref) {
     Project project = refResolver.resolveProject(ref);
-    return projectMapper.toDto(project);
+    return ProjectMapper.toDto(project);
   }
 
   /**
@@ -96,7 +95,7 @@ public class ProjectApplicationService {
     }
 
     Project saved = transactionTemplate.execute(status -> projectRepository.save(project));
-    return projectMapper.toDto(saved);
+    return ProjectMapper.toDto(saved);
   }
 
   /**
@@ -165,7 +164,7 @@ public class ProjectApplicationService {
 
     // Build response
     ProjectListResponseDto response = new ProjectListResponseDto();
-    response.setData(resultProjects.stream().map(projectMapper::toDto).toList());
+    response.setData(resultProjects.stream().map(ProjectMapper::toDto).toList());
 
     CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);

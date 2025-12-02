@@ -35,7 +35,6 @@ public class EpicApplicationService {
   private final EpicRepository epicRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
-  private final EpicMapper epicMapper;
   private final TransactionTemplate transactionTemplate;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -63,7 +62,7 @@ public class EpicApplicationService {
           epic.setTargetDate(request.getTargetDate());
 
           Epic saved = epicRepository.save(epic);
-          return epicMapper.toDto(saved);
+          return EpicMapper.toDto(saved);
         });
   }
 
@@ -77,7 +76,7 @@ public class EpicApplicationService {
   public EpicDto getEpic(String projectRef, String epicRef) {
     Project project = refResolver.resolveProject(projectRef);
     Epic epic = refResolver.resolveEpic(project, epicRef);
-    return epicMapper.toDto(epic);
+    return EpicMapper.toDto(epic);
   }
 
   /**
@@ -99,14 +98,14 @@ public class EpicApplicationService {
       epic.setDescription(request.getDescription());
     }
     if (request.getStatus() != null) {
-      epic.setStatus(epicMapper.toDomainStatus(request.getStatus()));
+      epic.setStatus(EpicMapper.toDomainStatus(request.getStatus()));
     }
     if (request.getTargetDate() != null) {
       epic.setTargetDate(request.getTargetDate());
     }
 
     Epic saved = transactionTemplate.execute(status -> epicRepository.save(epic));
-    return epicMapper.toDto(saved);
+    return EpicMapper.toDto(saved);
   }
 
   /**
@@ -151,7 +150,7 @@ public class EpicApplicationService {
     if (status != null) {
       allEpics =
           epicRepository.findByProjectIdAndStatus(
-              project.getId(), epicMapper.toDomainStatus(status));
+              project.getId(), EpicMapper.toDomainStatus(status));
     } else {
       allEpics = epicRepository.findByProjectId(project.getId());
     }
@@ -176,7 +175,7 @@ public class EpicApplicationService {
 
     // Build response
     EpicListResponseDto response = new EpicListResponseDto();
-    response.setData(resultEpics.stream().map(epicMapper::toDto).toList());
+    response.setData(resultEpics.stream().map(EpicMapper::toDto).toList());
 
     CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);
