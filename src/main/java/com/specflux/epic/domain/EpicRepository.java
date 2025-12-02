@@ -10,6 +10,8 @@ public interface EpicRepository extends JpaRepository<Epic, Long> {
 
   Optional<Epic> findByPublicId(String publicId);
 
+  Optional<Epic> findByPublicIdAndProjectId(String publicId, Long projectId);
+
   Optional<Epic> findByProjectIdAndDisplayKey(Long projectId, String displayKey);
 
   List<Epic> findByProjectId(Long projectId);

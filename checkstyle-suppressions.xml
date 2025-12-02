@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+    Checkstyle suppressions for SpecFlux Backend.
+    Excludes generated code from checkstyle validation.
+-->
+<suppressions>
+    <!-- Suppress all checks for generated OpenAPI code -->
+    <suppress files="[\\/]target[\\/]generated-sources[\\/]" checks=".*"/>
+    <suppress files="com[\\/]specflux[\\/]api[\\/]generated[\\/]" checks=".*"/>
+</suppressions>

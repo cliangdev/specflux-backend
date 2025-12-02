@@ -25,6 +25,6 @@ springdoc:
   api-docs:
     enabled: false
 
-# Firebase - disable in tests
+# Firebase - disabled in tests (use TestSecurityConfig instead)
 firebase:
   enabled: false
