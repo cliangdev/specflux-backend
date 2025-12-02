@@ -17,6 +17,7 @@ public final class FirebasePrincipal implements Principal {
   private final String firebaseUid;
   private final String email;
   private final String displayName;
+  private final String pictureUrl;
 
   /**
    * Creates a new FirebasePrincipal.
@@ -24,11 +25,14 @@ public final class FirebasePrincipal implements Principal {
    * @param firebaseUid the Firebase UID (required)
    * @param email the user's email (may be null)
    * @param displayName the user's display name (may be null)
+   * @param pictureUrl the user's profile picture URL (may be null)
    */
-  public FirebasePrincipal(String firebaseUid, String email, String displayName) {
+  public FirebasePrincipal(
+      String firebaseUid, String email, String displayName, String pictureUrl) {
     this.firebaseUid = Objects.requireNonNull(firebaseUid, "firebaseUid must not be null");
     this.email = email;
     this.displayName = displayName;
+    this.pictureUrl = pictureUrl;
   }
 
   /**

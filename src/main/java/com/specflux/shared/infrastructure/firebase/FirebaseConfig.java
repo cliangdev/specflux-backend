@@ -54,8 +54,16 @@ public class FirebaseConfig {
       FirebaseOptions.Builder builder = FirebaseOptions.builder();
 
       if (emulatorEnabled) {
-        // Emulator mode - use demo project with mock credentials
-        System.setProperty("FIREBASE_AUTH_EMULATOR_HOST", emulatorHost);
+        String envHost = System.getenv("FIREBASE_AUTH_EMULATOR_HOST");
+        if (envHost == null || envHost.isBlank()) {
+          log.warn(
+              "FIREBASE_AUTH_EMULATOR_HOST env var not set. "
+                  + "Token verification may fail. Start app with: "
+                  + "FIREBASE_AUTH_EMULATOR_HOST={} mvn spring-boot:run",
+              emulatorHost);
+          // Try to set it via system property (works for some SDK versions)
+          System.setProperty("FIREBASE_AUTH_EMULATOR_HOST", emulatorHost);
+        }
         builder
             .setProjectId("demo-specflux")
             .setCredentials(GoogleCredentials.create(new AccessToken("emulator-token", null)));

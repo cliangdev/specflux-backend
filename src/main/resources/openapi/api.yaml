@@ -53,6 +53,10 @@ tags:
     description: |
       Release/milestone management endpoints.
       Releases group completed epics and tasks into versioned milestones for deployment tracking.
+  - name: Users
+    description: |
+      User profile management endpoints.
+      Users are auto-provisioned on first Firebase authentication (GitHub OAuth).
 
 paths:
   # ==================== PROJECTS ====================
@@ -892,6 +896,74 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # ==================== USERS ====================
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get current authenticated user
+      description: |
+        Returns the profile of the currently authenticated user.
+        Auto-provisions the user on first call if not exists.
+      tags: [Users]
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      operationId: updateCurrentUser
+      summary: Update current user profile
+      description: Update the display name and/or avatar URL of the current user.
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{ref}:
+    parameters:
+      - name: ref
+        in: path
+        required: true
+        description: User public ID (usr_xxx)
+        schema:
+          type: string
+
+    get:
+      operationId: getUser
+      summary: Get user by public ID
+      description: Lookup a user by their public ID. Used for member lookup in project collaboration.
+      tags: [Users]
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1416,3 +1488,44 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AcceptanceCriteria'
+
+    # Users
+    User:
+      type: object
+      required: [publicId, email, displayName, createdAt]
+      properties:
+        publicId:
+          type: string
+          description: Public user identifier (usr_xxx)
+          example: usr_abc123def456
+        email:
+          type: string
+          format: email
+          description: User's email address from OAuth provider
+        displayName:
+          type: string
+          description: User's display name
+          example: John Doe
+        avatarUrl:
+          type: string
+          nullable: true
+          description: URL to user's avatar image
+          example: https://avatars.githubusercontent.com/u/12345
+        createdAt:
+          type: string
+          format: date-time
+          description: When the user account was created
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: New display name
+        avatarUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: New avatar URL (null to remove)

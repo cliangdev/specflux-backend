@@ -50,7 +50,10 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 
         FirebasePrincipal principal =
             new FirebasePrincipal(
-                firebaseToken.getUid(), firebaseToken.getEmail(), firebaseToken.getName());
+                firebaseToken.getUid(),
+                firebaseToken.getEmail(),
+                firebaseToken.getName(),
+                firebaseToken.getPicture());
 
         FirebaseAuthenticationToken authentication =
             new FirebaseAuthenticationToken(principal, token, Collections.emptyList());
