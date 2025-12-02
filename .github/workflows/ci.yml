@@ -32,6 +32,9 @@ jobs:
       - name: Check code formatting
         run: mvn spotless:check
 
+      - name: Check code style (checkstyle)
+        run: mvn checkstyle:check
+
   # Build and test in parallel with lint
   build:
     name: Build & Test
@@ -59,6 +62,7 @@ jobs:
           name: Unit Tests
           path: target/surefire-reports/*.xml
           reporter: java-junit
+          use-actions-summary: false
 
   # Package job - runs after build succeeds
   package:

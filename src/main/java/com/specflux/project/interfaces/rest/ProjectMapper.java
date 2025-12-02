@@ -6,6 +6,7 @@ import java.time.ZoneOffset;
 
 import org.springframework.stereotype.Component;
 
+import com.specflux.api.generated.model.ProjectDto;
 import com.specflux.project.domain.Project;
 
 /** Mapper for converting between Project domain entities and API DTOs. */
@@ -18,8 +19,8 @@ public class ProjectMapper {
    * @param domain the domain entity
    * @return the API DTO
    */
-  public com.specflux.api.generated.model.Project toDto(Project domain) {
-    com.specflux.api.generated.model.Project dto = new com.specflux.api.generated.model.Project();
+  public ProjectDto toDto(Project domain) {
+    ProjectDto dto = new ProjectDto();
     dto.setPublicId(domain.getPublicId());
     dto.setProjectKey(domain.getProjectKey());
     dto.setName(domain.getName());

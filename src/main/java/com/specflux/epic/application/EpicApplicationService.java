@@ -7,14 +7,16 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.specflux.api.generated.model.CreateEpicRequest;
-import com.specflux.api.generated.model.CursorPagination;
-import com.specflux.api.generated.model.EpicListResponse;
-import com.specflux.api.generated.model.UpdateEpicRequest;
+import com.specflux.api.generated.model.CreateEpicRequestDto;
+import com.specflux.api.generated.model.CursorPaginationDto;
+import com.specflux.api.generated.model.EpicDto;
+import com.specflux.api.generated.model.EpicListResponseDto;
+import com.specflux.api.generated.model.EpicStatusDto;
+import com.specflux.api.generated.model.UpdateEpicRequestDto;
 import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicRepository;
 import com.specflux.epic.interfaces.rest.EpicMapper;
@@ -23,27 +25,19 @@ import com.specflux.shared.application.CurrentUserService;
 import com.specflux.shared.interfaces.rest.RefResolver;
 import com.specflux.user.domain.User;
 
+import lombok.RequiredArgsConstructor;
+
 /** Application service for Epic operations. */
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class EpicApplicationService {
 
   private final EpicRepository epicRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
   private final EpicMapper epicMapper;
+  private final TransactionTemplate transactionTemplate;
   private final ObjectMapper objectMapper = new ObjectMapper();
-
-  public EpicApplicationService(
-      EpicRepository epicRepository,
-      RefResolver refResolver,
-      CurrentUserService currentUserService,
-      EpicMapper epicMapper) {
-    this.epicRepository = epicRepository;
-    this.refResolver = refResolver;
-    this.currentUserService = currentUserService;
-    this.epicMapper = epicMapper;
-  }
 
   /**
    * Creates a new epic in a project.
@@ -52,22 +46,25 @@ public class EpicApplicationService {
    * @param request the create request
    * @return the created epic DTO
    */
-  public com.specflux.api.generated.model.Epic createEpic(
-      String projectRef, CreateEpicRequest request) {
-    Project project = refResolver.resolveProject(projectRef);
-    User currentUser = currentUserService.getCurrentUser();
+  public EpicDto createEpic(String projectRef, CreateEpicRequestDto request) {
+    return transactionTemplate.execute(
+        status -> {
+          Project project = refResolver.resolveProject(projectRef);
+          User currentUser = currentUserService.getCurrentUser();
 
-    String publicId = generatePublicId("epic");
-    int sequenceNumber = getNextSequenceNumber(project);
-    String displayKey = project.getProjectKey() + "-E" + sequenceNumber;
+          String publicId = generatePublicId("epic");
+          int sequenceNumber = getNextSequenceNumber(project);
+          String displayKey = project.getProjectKey() + "-E" + sequenceNumber;
 
-    Epic epic =
-        new Epic(publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
-    epic.setDescription(request.getDescription());
-    epic.setTargetDate(request.getTargetDate());
+          Epic epic =
+              new Epic(
+                  publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
+          epic.setDescription(request.getDescription());
+          epic.setTargetDate(request.getTargetDate());
 
-    Epic saved = epicRepository.save(epic);
-    return epicMapper.toDto(saved);
+          Epic saved = epicRepository.save(epic);
+          return epicMapper.toDto(saved);
+        });
   }
 
   /**
@@ -77,8 +74,7 @@ public class EpicApplicationService {
    * @param epicRef the epic reference (publicId or displayKey)
    * @return the epic DTO
    */
-  @Transactional(readOnly = true)
-  public com.specflux.api.generated.model.Epic getEpic(String projectRef, String epicRef) {
+  public EpicDto getEpic(String projectRef, String epicRef) {
     Project project = refResolver.resolveProject(projectRef);
     Epic epic = refResolver.resolveEpic(project, epicRef);
     return epicMapper.toDto(epic);
@@ -92,8 +88,7 @@ public class EpicApplicationService {
    * @param request the update request
    * @return the updated epic DTO
    */
-  public com.specflux.api.generated.model.Epic updateEpic(
-      String projectRef, String epicRef, UpdateEpicRequest request) {
+  public EpicDto updateEpic(String projectRef, String epicRef, UpdateEpicRequestDto request) {
     Project project = refResolver.resolveProject(projectRef);
     Epic epic = refResolver.resolveEpic(project, epicRef);
 
@@ -110,7 +105,7 @@ public class EpicApplicationService {
       epic.setTargetDate(request.getTargetDate());
     }
 
-    Epic saved = epicRepository.save(epic);
+    Epic saved = transactionTemplate.execute(status -> epicRepository.save(epic));
     return epicMapper.toDto(saved);
   }
 
@@ -123,7 +118,7 @@ public class EpicApplicationService {
   public void deleteEpic(String projectRef, String epicRef) {
     Project project = refResolver.resolveProject(projectRef);
     Epic epic = refResolver.resolveEpic(project, epicRef);
-    epicRepository.delete(epic);
+    transactionTemplate.executeWithoutResult(status -> epicRepository.delete(epic));
   }
 
   /**
@@ -137,14 +132,13 @@ public class EpicApplicationService {
    * @param status optional status filter
    * @return the paginated epic list
    */
-  @Transactional(readOnly = true)
-  public EpicListResponse listEpics(
+  public EpicListResponseDto listEpics(
       String projectRef,
       String cursor,
       int limit,
       String sort,
       String order,
-      com.specflux.api.generated.model.EpicStatus status) {
+      EpicStatusDto status) {
 
     Project project = refResolver.resolveProject(projectRef);
 
@@ -181,10 +175,10 @@ public class EpicApplicationService {
     List<Epic> resultEpics = hasMore ? sortedEpics.subList(0, limit) : sortedEpics;
 
     // Build response
-    EpicListResponse response = new EpicListResponse();
+    EpicListResponseDto response = new EpicListResponseDto();
     response.setData(resultEpics.stream().map(epicMapper::toDto).toList());
 
-    CursorPagination pagination = new CursorPagination();
+    CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);
     pagination.setHasMore(hasMore);
 

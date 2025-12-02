@@ -5,37 +5,36 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.specflux.api.generated.ProjectsApi;
-import com.specflux.api.generated.model.CreateProjectRequest;
-import com.specflux.api.generated.model.Project;
-import com.specflux.api.generated.model.ProjectListResponse;
-import com.specflux.api.generated.model.UpdateProjectRequest;
+import com.specflux.api.generated.model.CreateProjectRequestDto;
+import com.specflux.api.generated.model.ProjectDto;
+import com.specflux.api.generated.model.ProjectListResponseDto;
+import com.specflux.api.generated.model.UpdateProjectRequestDto;
 import com.specflux.project.application.ProjectApplicationService;
+
+import lombok.RequiredArgsConstructor;
 
 /** REST controller for Project operations. Implements generated OpenAPI interface. */
 @RestController
+@RequiredArgsConstructor
 public class ProjectController implements ProjectsApi {
 
   private final ProjectApplicationService projectApplicationService;
 
-  public ProjectController(ProjectApplicationService projectApplicationService) {
-    this.projectApplicationService = projectApplicationService;
-  }
-
   @Override
-  public ResponseEntity<Project> createProject(CreateProjectRequest request) {
-    Project created = projectApplicationService.createProject(request);
+  public ResponseEntity<ProjectDto> createProject(CreateProjectRequestDto request) {
+    ProjectDto created = projectApplicationService.createProject(request);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @Override
-  public ResponseEntity<Project> getProject(String ref) {
-    Project project = projectApplicationService.getProject(ref);
+  public ResponseEntity<ProjectDto> getProject(String ref) {
+    ProjectDto project = projectApplicationService.getProject(ref);
     return ResponseEntity.ok(project);
   }
 
   @Override
-  public ResponseEntity<Project> updateProject(String ref, UpdateProjectRequest request) {
-    Project updated = projectApplicationService.updateProject(ref, request);
+  public ResponseEntity<ProjectDto> updateProject(String ref, UpdateProjectRequestDto request) {
+    ProjectDto updated = projectApplicationService.updateProject(ref, request);
     return ResponseEntity.ok(updated);
   }
 
@@ -46,9 +45,9 @@ public class ProjectController implements ProjectsApi {
   }
 
   @Override
-  public ResponseEntity<ProjectListResponse> listProjects(
+  public ResponseEntity<ProjectListResponseDto> listProjects(
       String cursor, Integer limit, String sort, String order) {
-    ProjectListResponse response =
+    ProjectListResponseDto response =
         projectApplicationService.listProjects(cursor, limit, sort, order);
     return ResponseEntity.ok(response);
   }

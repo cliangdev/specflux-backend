@@ -10,8 +10,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.specflux.api.generated.model.ErrorResponse;
-import com.specflux.api.generated.model.FieldError;
+import com.specflux.api.generated.model.ErrorResponseDto;
+import com.specflux.api.generated.model.FieldErrorDto;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -22,35 +22,36 @@ public class GlobalExceptionHandler {
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @ExceptionHandler(EntityNotFoundException.class)
-  public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
-    ErrorResponse error = new ErrorResponse();
+  public ResponseEntity<ErrorResponseDto> handleEntityNotFound(EntityNotFoundException ex) {
+    ErrorResponseDto error = new ErrorResponseDto();
     error.setError(ex.getMessage());
     error.setCode("NOT_FOUND");
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
-  public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
-    ErrorResponse error = new ErrorResponse();
+  public ResponseEntity<ErrorResponseDto> handleIllegalArgument(IllegalArgumentException ex) {
+    ErrorResponseDto error = new ErrorResponseDto();
     error.setError(ex.getMessage());
     error.setCode("BAD_REQUEST");
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
-    List<FieldError> fieldErrors =
+  public ResponseEntity<ErrorResponseDto> handleValidationErrors(
+      MethodArgumentNotValidException ex) {
+    List<FieldErrorDto> fieldErrors =
         ex.getBindingResult().getFieldErrors().stream()
             .map(
                 fe -> {
-                  FieldError fieldError = new FieldError();
+                  FieldErrorDto fieldError = new FieldErrorDto();
                   fieldError.setField(fe.getField());
                   fieldError.setMessage(fe.getDefaultMessage());
                   return fieldError;
                 })
             .toList();
 
-    ErrorResponse error = new ErrorResponse();
+    ErrorResponseDto error = new ErrorResponseDto();
     error.setError("Validation failed");
     error.setCode("VALIDATION_ERROR");
     error.setDetails(fieldErrors);
@@ -58,25 +59,25 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(ResourceConflictException.class)
-  public ResponseEntity<ErrorResponse> handleConflict(ResourceConflictException ex) {
-    ErrorResponse error = new ErrorResponse();
+  public ResponseEntity<ErrorResponseDto> handleConflict(ResourceConflictException ex) {
+    ErrorResponseDto error = new ErrorResponseDto();
     error.setError(ex.getMessage());
     error.setCode("CONFLICT");
     return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
   }
 
   @ExceptionHandler(AccessDeniedException.class)
-  public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
-    ErrorResponse error = new ErrorResponse();
+  public ResponseEntity<ErrorResponseDto> handleAccessDenied(AccessDeniedException ex) {
+    ErrorResponseDto error = new ErrorResponseDto();
     error.setError(ex.getMessage());
     error.setCode("FORBIDDEN");
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
   }
 
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+  public ResponseEntity<ErrorResponseDto> handleGenericException(Exception ex) {
     log.error("Unhandled exception", ex);
-    ErrorResponse error = new ErrorResponse();
+    ErrorResponseDto error = new ErrorResponseDto();
     error.setError("An unexpected error occurred");
     error.setCode("INTERNAL_ERROR");
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);

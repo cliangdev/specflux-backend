@@ -8,14 +8,17 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.specflux.api.generated.model.CreateTaskRequest;
-import com.specflux.api.generated.model.CursorPagination;
-import com.specflux.api.generated.model.TaskListResponse;
-import com.specflux.api.generated.model.UpdateTaskRequest;
+import com.specflux.api.generated.model.CreateTaskRequestDto;
+import com.specflux.api.generated.model.CursorPaginationDto;
+import com.specflux.api.generated.model.TaskDto;
+import com.specflux.api.generated.model.TaskListResponseDto;
+import com.specflux.api.generated.model.TaskPriorityDto;
+import com.specflux.api.generated.model.TaskStatusDto;
+import com.specflux.api.generated.model.UpdateTaskRequestDto;
 import com.specflux.epic.domain.Epic;
 import com.specflux.project.domain.Project;
 import com.specflux.shared.application.CurrentUserService;
@@ -26,27 +29,19 @@ import com.specflux.task.domain.TaskRepository;
 import com.specflux.task.interfaces.rest.TaskMapper;
 import com.specflux.user.domain.User;
 
+import lombok.RequiredArgsConstructor;
+
 /** Application service for Task operations. */
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class TaskApplicationService {
 
   private final TaskRepository taskRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
   private final TaskMapper taskMapper;
+  private final TransactionTemplate transactionTemplate;
   private final ObjectMapper objectMapper = new ObjectMapper();
-
-  public TaskApplicationService(
-      TaskRepository taskRepository,
-      RefResolver refResolver,
-      CurrentUserService currentUserService,
-      TaskMapper taskMapper) {
-    this.taskRepository = taskRepository;
-    this.refResolver = refResolver;
-    this.currentUserService = currentUserService;
-    this.taskMapper = taskMapper;
-  }
 
   /**
    * Creates a new task in a project.
@@ -55,40 +50,41 @@ public class TaskApplicationService {
    * @param request the create request
    * @return the created task DTO
    */
-  public com.specflux.api.generated.model.Task createTask(
-      String projectRef, CreateTaskRequest request) {
-    Project project = refResolver.resolveProject(projectRef);
-    User currentUser = currentUserService.getCurrentUser();
+  public TaskDto createTask(String projectRef, CreateTaskRequestDto request) {
+      Project project = refResolver.resolveProject(projectRef);
+      User currentUser = currentUserService.getCurrentUser();
 
-    String publicId = generatePublicId("task");
-    int sequenceNumber = getNextSequenceNumber(project);
-    String displayKey = project.getProjectKey() + "-" + sequenceNumber;
+      String publicId = generatePublicId("task");
+      int sequenceNumber = getNextSequenceNumber(project);
+      String displayKey = project.getProjectKey() + "-" + sequenceNumber;
 
-    Task task =
-        new Task(publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
-    task.setDescription(request.getDescription());
+      Task task =
+              new Task(
+                      publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
+      task.setDescription(request.getDescription());
 
-    // Set optional fields
-    if (request.getEpicRef() != null) {
-      Epic epic = refResolver.resolveEpic(project, request.getEpicRef());
-      task.setEpic(epic);
-    }
-    if (request.getPriority() != null) {
-      task.setPriority(taskMapper.toDomainPriority(request.getPriority()));
-    }
-    if (request.getRequiresApproval() != null) {
-      task.setRequiresApproval(request.getRequiresApproval());
-    }
-    if (request.getEstimatedDuration() != null) {
-      task.setEstimatedDuration(request.getEstimatedDuration());
-    }
-    if (request.getAssignedToRef() != null) {
-      User assignee = refResolver.resolveUser(request.getAssignedToRef());
-      task.setAssignedTo(assignee);
-    }
+      // Set optional fields
+      if (request.getEpicRef() != null) {
+          Epic epic = refResolver.resolveEpic(project, request.getEpicRef());
+          task.setEpic(epic);
+      }
+      if (request.getPriority() != null) {
+          task.setPriority(taskMapper.toDomainPriority(request.getPriority()));
+      }
+      if (request.getRequiresApproval() != null) {
+          task.setRequiresApproval(request.getRequiresApproval());
+      }
+      if (request.getEstimatedDuration() != null) {
+          task.setEstimatedDuration(request.getEstimatedDuration());
+      }
+      if (request.getAssignedToRef() != null) {
+          User assignee = refResolver.resolveUser(request.getAssignedToRef());
+          task.setAssignedTo(assignee);
+      }
 
-    Task saved = taskRepository.save(task);
-    return taskMapper.toDto(saved);
+      Task saved = transactionTemplate.execute(
+              _ -> taskRepository.save(task));
+      return taskMapper.toDto(saved);
   }
 
   /**
@@ -98,8 +94,7 @@ public class TaskApplicationService {
    * @param taskRef the task reference (publicId or displayKey)
    * @return the task DTO
    */
-  @Transactional(readOnly = true)
-  public com.specflux.api.generated.model.Task getTask(String projectRef, String taskRef) {
+  public TaskDto getTask(String projectRef, String taskRef) {
     Project project = refResolver.resolveProject(projectRef);
     Task task = refResolver.resolveTask(project, taskRef);
     return taskMapper.toDto(task);
@@ -113,8 +108,7 @@ public class TaskApplicationService {
    * @param request the update request
    * @return the updated task DTO
    */
-  public com.specflux.api.generated.model.Task updateTask(
-      String projectRef, String taskRef, UpdateTaskRequest request) {
+  public TaskDto updateTask(String projectRef, String taskRef, UpdateTaskRequestDto request) {
     Project project = refResolver.resolveProject(projectRef);
     Task task = refResolver.resolveTask(project, taskRef);
 
@@ -151,7 +145,7 @@ public class TaskApplicationService {
       task.setAssignedTo(assignee);
     }
 
-    Task saved = taskRepository.save(task);
+    Task saved = transactionTemplate.execute(_ -> taskRepository.save(task));
     return taskMapper.toDto(saved);
   }
 
@@ -164,7 +158,7 @@ public class TaskApplicationService {
   public void deleteTask(String projectRef, String taskRef) {
     Project project = refResolver.resolveProject(projectRef);
     Task task = refResolver.resolveTask(project, taskRef);
-    taskRepository.delete(task);
+    transactionTemplate.executeWithoutResult(_ -> taskRepository.delete(task));
   }
 
   /**
@@ -182,15 +176,14 @@ public class TaskApplicationService {
    * @param search optional search term
    * @return the paginated task list
    */
-  @Transactional(readOnly = true)
-  public TaskListResponse listTasks(
+  public TaskListResponseDto listTasks(
       String projectRef,
       String cursor,
       int limit,
       String sort,
       String order,
-      com.specflux.api.generated.model.TaskStatus status,
-      com.specflux.api.generated.model.TaskPriority priority,
+      TaskStatusDto status,
+      TaskPriorityDto priority,
       String epicRef,
       String assignedToRef,
       String search) {
@@ -256,10 +249,10 @@ public class TaskApplicationService {
     List<Task> resultTasks = hasMore ? sortedTasks.subList(0, limit) : sortedTasks;
 
     // Build response
-    TaskListResponse response = new TaskListResponse();
+    TaskListResponseDto response = new TaskListResponseDto();
     response.setData(resultTasks.stream().map(taskMapper::toDto).toList());
 
-    CursorPagination pagination = new CursorPagination();
+    CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);
     pagination.setHasMore(hasMore);
 

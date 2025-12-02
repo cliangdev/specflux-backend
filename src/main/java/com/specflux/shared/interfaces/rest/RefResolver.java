@@ -1,5 +1,6 @@
 package com.specflux.shared.interfaces.rest;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import com.specflux.epic.domain.Epic;
@@ -26,23 +27,13 @@ import jakarta.persistence.EntityNotFoundException;
  * </ul>
  */
 @Service
+@RequiredArgsConstructor
 public class RefResolver {
 
   private final ProjectRepository projectRepository;
   private final EpicRepository epicRepository;
   private final TaskRepository taskRepository;
   private final UserRepository userRepository;
-
-  public RefResolver(
-      ProjectRepository projectRepository,
-      EpicRepository epicRepository,
-      TaskRepository taskRepository,
-      UserRepository userRepository) {
-    this.projectRepository = projectRepository;
-    this.epicRepository = epicRepository;
-    this.taskRepository = taskRepository;
-    this.userRepository = userRepository;
-  }
 
   /**
    * Resolves a project reference to a Project entity.

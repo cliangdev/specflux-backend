@@ -1,85 +1,62 @@
 package com.specflux.epic.interfaces.rest;
 
-import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.specflux.api.generated.model.CreateEpicRequest;
-import com.specflux.api.generated.model.UpdateEpicRequest;
-import com.specflux.common.AbstractIntegrationTest;
+import com.specflux.api.generated.model.CreateEpicRequestDto;
+import com.specflux.api.generated.model.EpicStatusDto;
+import com.specflux.api.generated.model.UpdateEpicRequestDto;
+import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicRepository;
 import com.specflux.epic.domain.EpicStatus;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
-import com.specflux.shared.application.CurrentUserService;
-import com.specflux.user.domain.User;
-import com.specflux.user.domain.UserRepository;
 
 /**
  * Integration tests for EpicController.
  *
  * <p>Uses schema isolation for parallel test execution.
  */
-@AutoConfigureMockMvc
-@Transactional
-class EpicControllerTest extends AbstractIntegrationTest {
+class EpicControllerTest extends AbstractControllerIntegrationTest {
 
   private static final String SCHEMA_NAME = "epic_controller_test";
 
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
   }
 
-  @Autowired private MockMvc mockMvc;
-  @Autowired private UserRepository userRepository;
   @Autowired private ProjectRepository projectRepository;
   @Autowired private EpicRepository epicRepository;
-  @MockitoBean private CurrentUserService currentUserService;
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
-
-  private User testUser;
   private Project testProject;
 
   @BeforeEach
-  void setUp() {
-    // Create test user
-    testUser =
-        userRepository.save(
-            new User("user_epic_test", "firebase_epic", "epic@example.com", "Epic Test User"));
-    // Create test project
+  void setUpProject() {
     testProject =
         projectRepository.save(
             new Project("proj_epic_test", "EPIC", "Epic Test Project", testUser));
-    // Mock current user service to return the test user
-    when(currentUserService.getCurrentUser()).thenReturn(testUser);
   }
 
   @Test
-  @WithMockUser(username = "user")
   void createEpic_shouldReturnCreatedEpic() throws Exception {
-    CreateEpicRequest request = new CreateEpicRequest();
+    CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("User Authentication Feature");
     request.setDescription("Implement OAuth2 authentication");
 
     mockMvc
         .perform(
             post("/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
@@ -95,14 +72,14 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void createEpic_usingProjectKey_shouldReturnCreatedEpic() throws Exception {
-    CreateEpicRequest request = new CreateEpicRequest();
+    CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Dashboard Feature");
 
     mockMvc
         .perform(
             post("/projects/{projectRef}/epics", testProject.getProjectKey())
+                .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
@@ -110,14 +87,14 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void createEpic_projectNotFound_shouldReturn404() throws Exception {
-    CreateEpicRequest request = new CreateEpicRequest();
+    CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Test Epic");
 
     mockMvc
         .perform(
             post("/projects/{projectRef}/epics", "nonexistent")
+                .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isNotFound())
@@ -125,7 +102,6 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void getEpic_byPublicId_shouldReturnEpic() throws Exception {
     Epic epic =
         epicRepository.save(
@@ -133,10 +109,8 @@ class EpicControllerTest extends AbstractIntegrationTest {
 
     mockMvc
         .perform(
-            get(
-                "/projects/{projectRef}/epics/{epicRef}",
-                testProject.getPublicId(),
-                "epic_test123"))
+            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_test123")
+                .with(user("user")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.publicId").value("epic_test123"))
         .andExpect(jsonPath("$.displayKey").value("EPIC-E1"))
@@ -144,7 +118,6 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void getEpic_byDisplayKey_shouldReturnEpic() throws Exception {
     Epic epic =
         epicRepository.save(
@@ -152,37 +125,38 @@ class EpicControllerTest extends AbstractIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics/{epicRef}", testProject.getProjectKey(), "EPIC-E2"))
+            get("/projects/{projectRef}/epics/{epicRef}", testProject.getProjectKey(), "EPIC-E2")
+                .with(user("user")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.publicId").value("epic_bykey"))
         .andExpect(jsonPath("$.displayKey").value("EPIC-E2"));
   }
 
   @Test
-  @WithMockUser(username = "user")
   void getEpic_notFound_shouldReturn404() throws Exception {
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "nonexistent"))
+            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "nonexistent")
+                .with(user("user")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }
 
   @Test
-  @WithMockUser(username = "user")
   void updateEpic_shouldReturnUpdatedEpic() throws Exception {
     Epic epic =
         epicRepository.save(
             new Epic("epic_update", testProject, 1, "EPIC-E1", "Original Title", testUser));
 
-    UpdateEpicRequest request = new UpdateEpicRequest();
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
     request.setTitle("Updated Title");
     request.setDescription("New description");
-    request.setStatus(com.specflux.api.generated.model.EpicStatus.IN_PROGRESS);
+    request.setStatus(EpicStatusDto.IN_PROGRESS);
 
     mockMvc
         .perform(
             put("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_update")
+                .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
@@ -192,19 +166,19 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void updateEpic_partialUpdate_shouldOnlyUpdateProvidedFields() throws Exception {
     Epic epic = new Epic("epic_partial", testProject, 1, "EPIC-E1", "Original Title", testUser);
     epic.setDescription("Original description");
     epicRepository.save(epic);
 
-    UpdateEpicRequest request = new UpdateEpicRequest();
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
     request.setTitle("New Title");
     // other fields not set
 
     mockMvc
         .perform(
             put("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_partial")
+                .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
@@ -214,7 +188,6 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void deleteEpic_shouldReturn204() throws Exception {
     Epic epic =
         epicRepository.save(
@@ -223,18 +196,21 @@ class EpicControllerTest extends AbstractIntegrationTest {
     mockMvc
         .perform(
             delete(
-                "/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_delete"))
+                    "/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_delete")
+                .with(user("user")))
         .andExpect(status().isNoContent());
 
     // Verify deletion
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_delete"))
+            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_delete")
+                .with(user("user")))
         .andExpect(status().isNotFound());
   }
 
   @Test
-  @WithMockUser(username = "user")
   void listEpics_shouldReturnPaginatedList() throws Exception {
     // Create test epics
     epicRepository.save(new Epic("epic_list1", testProject, 1, "EPIC-E1", "Epic 1", testUser));
@@ -242,7 +218,10 @@ class EpicControllerTest extends AbstractIntegrationTest {
     epicRepository.save(new Epic("epic_list3", testProject, 3, "EPIC-E3", "Epic 3", testUser));
 
     mockMvc
-        .perform(get("/projects/{projectRef}/epics", testProject.getPublicId()).param("limit", "2"))
+        .perform(
+            get("/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("limit", "2"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data").isArray())
         .andExpect(jsonPath("$.data.length()").value(2))
@@ -252,7 +231,6 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void listEpics_withStatusFilter_shouldReturnFilteredList() throws Exception {
     Epic epic1 = new Epic("epic_plan", testProject, 1, "EPIC-E1", "Planning Epic", testUser);
     epic1.setStatus(EpicStatus.PLANNING);
@@ -265,6 +243,7 @@ class EpicControllerTest extends AbstractIntegrationTest {
     mockMvc
         .perform(
             get("/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
                 .param("status", "IN_PROGRESS"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.length()").value(1))
@@ -272,7 +251,6 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void listEpics_withSort_shouldReturnSortedList() throws Exception {
     epicRepository.save(new Epic("epic_z", testProject, 1, "EPIC-E1", "Zeta Epic", testUser));
     epicRepository.save(new Epic("epic_a", testProject, 2, "EPIC-E2", "Alpha Epic", testUser));
@@ -280,6 +258,7 @@ class EpicControllerTest extends AbstractIntegrationTest {
     mockMvc
         .perform(
             get("/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
                 .param("sort", "title")
                 .param("order", "asc"))
         .andExpect(status().isOk())
@@ -288,10 +267,9 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void listEpics_emptyProject_shouldReturnEmptyList() throws Exception {
     mockMvc
-        .perform(get("/projects/{projectRef}/epics", testProject.getPublicId()))
+        .perform(get("/projects/{projectRef}/epics", testProject.getPublicId()).with(user("user")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data").isArray())
         .andExpect(jsonPath("$.data.length()").value(0))
@@ -300,28 +278,49 @@ class EpicControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "user")
   void createEpic_sequentialNumbers_shouldIncrementCorrectly() throws Exception {
     // Create first epic
-    CreateEpicRequest request1 = new CreateEpicRequest();
+    CreateEpicRequestDto request1 = new CreateEpicRequestDto();
     request1.setTitle("First Epic");
     mockMvc
         .perform(
             post("/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request1)))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.displayKey").value("EPIC-E1"));
 
     // Create second epic
-    CreateEpicRequest request2 = new CreateEpicRequest();
+    CreateEpicRequestDto request2 = new CreateEpicRequestDto();
     request2.setTitle("Second Epic");
     mockMvc
         .perform(
             post("/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request2)))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.displayKey").value("EPIC-E2"));
+  }
+
+  @Test
+  void listEpics_withoutAuth_shouldReturn403() throws Exception {
+    mockMvc
+        .perform(get("/projects/{projectRef}/epics", testProject.getPublicId()))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void createEpic_withoutAuth_shouldReturn403() throws Exception {
+    CreateEpicRequestDto request = new CreateEpicRequestDto();
+    request.setTitle("Test Epic");
+
+    mockMvc
+        .perform(
+            post("/projects/{projectRef}/epics", testProject.getPublicId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isForbidden());
   }
 }

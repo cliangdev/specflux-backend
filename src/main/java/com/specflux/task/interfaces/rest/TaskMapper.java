@@ -6,6 +6,9 @@ import java.time.ZoneOffset;
 
 import org.springframework.stereotype.Component;
 
+import com.specflux.api.generated.model.TaskDto;
+import com.specflux.api.generated.model.TaskPriorityDto;
+import com.specflux.api.generated.model.TaskStatusDto;
 import com.specflux.task.domain.Task;
 import com.specflux.task.domain.TaskPriority;
 import com.specflux.task.domain.TaskStatus;
@@ -20,8 +23,8 @@ public class TaskMapper {
    * @param domain the domain entity
    * @return the API DTO
    */
-  public com.specflux.api.generated.model.Task toDto(Task domain) {
-    com.specflux.api.generated.model.Task dto = new com.specflux.api.generated.model.Task();
+  public TaskDto toDto(Task domain) {
+    TaskDto dto = new TaskDto();
     dto.setPublicId(domain.getPublicId());
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
@@ -47,12 +50,12 @@ public class TaskMapper {
   }
 
   /**
-   * Converts an API TaskStatus to a domain TaskStatus.
+   * Converts an API TaskStatusDto to a domain TaskStatus.
    *
    * @param apiStatus the API status
    * @return the domain status
    */
-  public TaskStatus toDomainStatus(com.specflux.api.generated.model.TaskStatus apiStatus) {
+  public TaskStatus toDomainStatus(TaskStatusDto apiStatus) {
     if (apiStatus == null) {
       return null;
     }
@@ -68,12 +71,12 @@ public class TaskMapper {
   }
 
   /**
-   * Converts an API TaskPriority to a domain TaskPriority.
+   * Converts an API TaskPriorityDto to a domain TaskPriority.
    *
    * @param apiPriority the API priority
    * @return the domain priority
    */
-  public TaskPriority toDomainPriority(com.specflux.api.generated.model.TaskPriority apiPriority) {
+  public TaskPriority toDomainPriority(TaskPriorityDto apiPriority) {
     if (apiPriority == null) {
       return null;
     }
@@ -85,27 +88,27 @@ public class TaskMapper {
     };
   }
 
-  private com.specflux.api.generated.model.TaskStatus toApiStatus(TaskStatus domainStatus) {
+  private TaskStatusDto toApiStatus(TaskStatus domainStatus) {
     return switch (domainStatus) {
-      case BACKLOG -> com.specflux.api.generated.model.TaskStatus.BACKLOG;
-      case READY -> com.specflux.api.generated.model.TaskStatus.READY;
-      case IN_PROGRESS -> com.specflux.api.generated.model.TaskStatus.IN_PROGRESS;
-      case IN_REVIEW -> com.specflux.api.generated.model.TaskStatus.IN_REVIEW;
-      case BLOCKED -> com.specflux.api.generated.model.TaskStatus.BLOCKED;
-      case COMPLETED -> com.specflux.api.generated.model.TaskStatus.COMPLETED;
-      case CANCELLED -> com.specflux.api.generated.model.TaskStatus.CANCELLED;
+      case BACKLOG -> TaskStatusDto.BACKLOG;
+      case READY -> TaskStatusDto.READY;
+      case IN_PROGRESS -> TaskStatusDto.IN_PROGRESS;
+      case IN_REVIEW -> TaskStatusDto.IN_REVIEW;
+      case BLOCKED -> TaskStatusDto.BLOCKED;
+      case COMPLETED -> TaskStatusDto.COMPLETED;
+      case CANCELLED -> TaskStatusDto.CANCELLED;
     };
   }
 
-  private com.specflux.api.generated.model.TaskPriority toApiPriority(TaskPriority domainPriority) {
+  private TaskPriorityDto toApiPriority(TaskPriority domainPriority) {
     if (domainPriority == null) {
       return null;
     }
     return switch (domainPriority) {
-      case LOW -> com.specflux.api.generated.model.TaskPriority.LOW;
-      case MEDIUM -> com.specflux.api.generated.model.TaskPriority.MEDIUM;
-      case HIGH -> com.specflux.api.generated.model.TaskPriority.HIGH;
-      case CRITICAL -> com.specflux.api.generated.model.TaskPriority.CRITICAL;
+      case LOW -> TaskPriorityDto.LOW;
+      case MEDIUM -> TaskPriorityDto.MEDIUM;
+      case HIGH -> TaskPriorityDto.HIGH;
+      case CRITICAL -> TaskPriorityDto.CRITICAL;
     };
   }
 

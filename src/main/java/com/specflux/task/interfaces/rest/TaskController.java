@@ -5,40 +5,39 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.specflux.api.generated.TasksApi;
-import com.specflux.api.generated.model.CreateTaskRequest;
-import com.specflux.api.generated.model.Task;
-import com.specflux.api.generated.model.TaskListResponse;
-import com.specflux.api.generated.model.TaskPriority;
-import com.specflux.api.generated.model.TaskStatus;
-import com.specflux.api.generated.model.UpdateTaskRequest;
+import com.specflux.api.generated.model.CreateTaskRequestDto;
+import com.specflux.api.generated.model.TaskDto;
+import com.specflux.api.generated.model.TaskListResponseDto;
+import com.specflux.api.generated.model.TaskPriorityDto;
+import com.specflux.api.generated.model.TaskStatusDto;
+import com.specflux.api.generated.model.UpdateTaskRequestDto;
 import com.specflux.task.application.TaskApplicationService;
+
+import lombok.RequiredArgsConstructor;
 
 /** REST controller for Task operations. Implements generated OpenAPI interface. */
 @RestController
+@RequiredArgsConstructor
 public class TaskController implements TasksApi {
 
   private final TaskApplicationService taskApplicationService;
 
-  public TaskController(TaskApplicationService taskApplicationService) {
-    this.taskApplicationService = taskApplicationService;
-  }
-
   @Override
-  public ResponseEntity<Task> createTask(String projectRef, CreateTaskRequest request) {
-    Task created = taskApplicationService.createTask(projectRef, request);
+  public ResponseEntity<TaskDto> createTask(String projectRef, CreateTaskRequestDto request) {
+    TaskDto created = taskApplicationService.createTask(projectRef, request);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @Override
-  public ResponseEntity<Task> getTask(String projectRef, String taskRef) {
-    Task task = taskApplicationService.getTask(projectRef, taskRef);
+  public ResponseEntity<TaskDto> getTask(String projectRef, String taskRef) {
+    TaskDto task = taskApplicationService.getTask(projectRef, taskRef);
     return ResponseEntity.ok(task);
   }
 
   @Override
-  public ResponseEntity<Task> updateTask(
-      String projectRef, String taskRef, UpdateTaskRequest request) {
-    Task updated = taskApplicationService.updateTask(projectRef, taskRef, request);
+  public ResponseEntity<TaskDto> updateTask(
+      String projectRef, String taskRef, UpdateTaskRequestDto request) {
+    TaskDto updated = taskApplicationService.updateTask(projectRef, taskRef, request);
     return ResponseEntity.ok(updated);
   }
 
@@ -49,18 +48,18 @@ public class TaskController implements TasksApi {
   }
 
   @Override
-  public ResponseEntity<TaskListResponse> listTasks(
+  public ResponseEntity<TaskListResponseDto> listTasks(
       String projectRef,
       String cursor,
       Integer limit,
       String sort,
       String order,
-      TaskStatus status,
-      TaskPriority priority,
+      TaskStatusDto status,
+      TaskPriorityDto priority,
       String epicRef,
       String assignedToRef,
       String search) {
-    TaskListResponse response =
+    TaskListResponseDto response =
         taskApplicationService.listTasks(
             projectRef,
             cursor,

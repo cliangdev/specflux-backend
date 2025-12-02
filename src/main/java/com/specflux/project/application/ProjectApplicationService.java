@@ -9,14 +9,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.specflux.api.generated.model.CreateProjectRequest;
-import com.specflux.api.generated.model.CursorPagination;
-import com.specflux.api.generated.model.ProjectListResponse;
-import com.specflux.api.generated.model.UpdateProjectRequest;
+import com.specflux.api.generated.model.CreateProjectRequestDto;
+import com.specflux.api.generated.model.CursorPaginationDto;
+import com.specflux.api.generated.model.ProjectDto;
+import com.specflux.api.generated.model.ProjectListResponseDto;
+import com.specflux.api.generated.model.UpdateProjectRequestDto;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
 import com.specflux.project.interfaces.rest.ProjectMapper;
@@ -25,27 +26,19 @@ import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceConfli
 import com.specflux.shared.interfaces.rest.RefResolver;
 import com.specflux.user.domain.User;
 
+import lombok.RequiredArgsConstructor;
+
 /** Application service for Project operations. */
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class ProjectApplicationService {
 
   private final ProjectRepository projectRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
   private final ProjectMapper projectMapper;
+  private final TransactionTemplate transactionTemplate;
   private final ObjectMapper objectMapper = new ObjectMapper();
-
-  public ProjectApplicationService(
-      ProjectRepository projectRepository,
-      RefResolver refResolver,
-      CurrentUserService currentUserService,
-      ProjectMapper projectMapper) {
-    this.projectRepository = projectRepository;
-    this.refResolver = refResolver;
-    this.currentUserService = currentUserService;
-    this.projectMapper = projectMapper;
-  }
 
   /**
    * Creates a new project.
@@ -53,21 +46,25 @@ public class ProjectApplicationService {
    * @param request the create request
    * @return the created project DTO
    */
-  public com.specflux.api.generated.model.Project createProject(CreateProjectRequest request) {
-    // Check for duplicate project key
-    if (projectRepository.existsByProjectKey(request.getProjectKey())) {
-      throw new ResourceConflictException(
-          "Project with key '" + request.getProjectKey() + "' already exists");
-    }
+  public ProjectDto createProject(CreateProjectRequestDto request) {
+    return transactionTemplate.execute(
+        status -> {
+          // Check for duplicate project key
+          if (projectRepository.existsByProjectKey(request.getProjectKey())) {
+            throw new ResourceConflictException(
+                "Project with key '" + request.getProjectKey() + "' already exists");
+          }
 
-    User owner = currentUserService.getCurrentUser();
-    String publicId = generatePublicId("proj");
+          User owner = currentUserService.getCurrentUser();
+          String publicId = generatePublicId("proj");
 
-    Project project = new Project(publicId, request.getProjectKey(), request.getName(), owner);
-    project.setDescription(request.getDescription());
+          Project project =
+              new Project(publicId, request.getProjectKey(), request.getName(), owner);
+          project.setDescription(request.getDescription());
 
-    Project saved = projectRepository.save(project);
-    return projectMapper.toDto(saved);
+          Project saved = projectRepository.save(project);
+          return projectMapper.toDto(saved);
+        });
   }
 
   /**
@@ -76,8 +73,7 @@ public class ProjectApplicationService {
    * @param ref the project reference
    * @return the project DTO
    */
-  @Transactional(readOnly = true)
-  public com.specflux.api.generated.model.Project getProject(String ref) {
+  public ProjectDto getProject(String ref) {
     Project project = refResolver.resolveProject(ref);
     return projectMapper.toDto(project);
   }
@@ -89,8 +85,7 @@ public class ProjectApplicationService {
    * @param request the update request
    * @return the updated project DTO
    */
-  public com.specflux.api.generated.model.Project updateProject(
-      String ref, UpdateProjectRequest request) {
+  public ProjectDto updateProject(String ref, UpdateProjectRequestDto request) {
     Project project = refResolver.resolveProject(ref);
 
     if (request.getName() != null) {
@@ -100,7 +95,7 @@ public class ProjectApplicationService {
       project.setDescription(request.getDescription());
     }
 
-    Project saved = projectRepository.save(project);
+    Project saved = transactionTemplate.execute(status -> projectRepository.save(project));
     return projectMapper.toDto(saved);
   }
 
@@ -111,7 +106,7 @@ public class ProjectApplicationService {
    */
   public void deleteProject(String ref) {
     Project project = refResolver.resolveProject(ref);
-    projectRepository.delete(project);
+    transactionTemplate.executeWithoutResult(status -> projectRepository.delete(project));
   }
 
   /**
@@ -123,8 +118,7 @@ public class ProjectApplicationService {
    * @param order the sort order (asc/desc)
    * @return the paginated project list
    */
-  @Transactional(readOnly = true)
-  public ProjectListResponse listProjects(String cursor, int limit, String sort, String order) {
+  public ProjectListResponseDto listProjects(String cursor, int limit, String sort, String order) {
     User currentUser = currentUserService.getCurrentUser();
 
     // Parse cursor if present
@@ -170,10 +164,10 @@ public class ProjectApplicationService {
     List<Project> resultProjects = hasMore ? projects.subList(0, limit) : projects;
 
     // Build response
-    ProjectListResponse response = new ProjectListResponse();
+    ProjectListResponseDto response = new ProjectListResponseDto();
     response.setData(resultProjects.stream().map(projectMapper::toDto).toList());
 
-    CursorPagination pagination = new CursorPagination();
+    CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);
     pagination.setHasMore(hasMore);
 
