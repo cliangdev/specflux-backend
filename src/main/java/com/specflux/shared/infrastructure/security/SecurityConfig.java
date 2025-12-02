@@ -40,7 +40,8 @@ public class SecurityConfig {
                     .requestMatchers("/actuator/**")
                     .permitAll()
                     // OpenAPI / Swagger endpoints
-                    .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                    .requestMatchers(
+                        "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/openapi/**")
                     .permitAll()
                     // All other requests require authentication
                     .anyRequest()

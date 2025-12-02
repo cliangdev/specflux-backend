@@ -1,25 +1,58 @@
 openapi: 3.1.0
 info:
   title: SpecFlux API
-  description: REST API for SpecFlux project management
+  description: |
+    REST API for SpecFlux - AI-Powered Multi-Repo Development Orchestrator.
+
+    SpecFlux transforms "vibe coding" into disciplined, spec-driven engineering by providing:
+    - Unified Kanban board for multi-repo project management
+    - Automatic Claude Code agent launching with context injection
+    - Human-in-the-loop approval workflows
+
+    ## Authentication
+    All API endpoints (except health checks and documentation) require Firebase JWT authentication.
+    Include the Firebase ID token in the `Authorization` header as a Bearer token.
+
+    ## Error Responses
+    All endpoints return consistent error responses with `code`, `message`, and optional `details` fields.
   version: 1.0.0
+  contact:
+    name: SpecFlux Team
+    url: https://github.com/cliangdev/specflux
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+externalDocs:
+  description: SpecFlux Documentation
+  url: https://github.com/cliangdev/specflux
 
 servers:
   - url: http://localhost:8090/api
     description: Local development server
+  - url: https://api.specflux.dev/api
+    description: Production server (coming soon)
 
 security:
   - bearerAuth: []
 
 tags:
   - name: Projects
-    description: Project management endpoints
+    description: |
+      Project management endpoints.
+      Projects are top-level containers that group related epics and tasks across multiple repositories.
   - name: Epics
-    description: Epic management endpoints
+    description: |
+      Epic management endpoints.
+      Epics represent large features or initiatives containing multiple tasks with a PRD (Product Requirements Document).
   - name: Tasks
-    description: Task management endpoints
+    description: |
+      Task management endpoints.
+      Tasks are individual work units executed by Claude Code agents, with status tracking and dependencies.
   - name: Releases
-    description: Release/milestone management endpoints
+    description: |
+      Release/milestone management endpoints.
+      Releases group completed epics and tasks into versioned milestones for deployment tracking.
 
 paths:
   # ==================== PROJECTS ====================
