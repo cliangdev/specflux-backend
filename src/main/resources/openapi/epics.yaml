@@ -1,5 +1,5 @@
 paths:
-  /projects/{projectRef}/epics:
+  /api/projects/{projectRef}/epics:
     parameters:
       - name: projectRef
         in: path
@@ -68,7 +68,7 @@ paths:
         '500':
           $ref: './components/responses.yaml#/components/responses/InternalServerError'
 
-  /projects/{projectRef}/epics/{epicRef}:
+  /api/projects/{projectRef}/epics/{epicRef}:
     parameters:
       - name: projectRef
         in: path
@@ -79,13 +79,13 @@ paths:
       - name: epicRef
         in: path
         required: true
-        description: Epic public ID (epic_xxx) or display key (SPEC-E1)
+        description: Epic ID (epic_xxx) or display key (SPEC-E1)
         schema:
           type: string
         examples:
-          publicId:
+          id:
             value: "epic_xyz789abc123"
-            summary: Using public ID
+            summary: Using ID
           displayKey:
             value: "SPEC-E1"
             summary: Using display key
@@ -158,7 +158,7 @@ paths:
         '500':
           $ref: './components/responses.yaml#/components/responses/InternalServerError'
 
-  /projects/{projectRef}/epics/{epicRef}/tasks:
+  /api/projects/{projectRef}/epics/{epicRef}/tasks:
     parameters:
       - name: projectRef
         in: path
@@ -202,7 +202,7 @@ paths:
         '500':
           $ref: './components/responses.yaml#/components/responses/InternalServerError'
 
-  /projects/{projectRef}/epics/{epicRef}/dependencies:
+  /api/projects/{projectRef}/epics/{epicRef}/dependencies:
     parameters:
       - name: projectRef
         in: path
@@ -275,7 +275,7 @@ paths:
         '500':
           $ref: './components/responses.yaml#/components/responses/InternalServerError'
 
-  /projects/{projectRef}/epics/{epicRef}/dependencies/{depEpicRef}:
+  /api/projects/{projectRef}/epics/{epicRef}/dependencies/{depEpicRef}:
     parameters:
       - name: projectRef
         in: path

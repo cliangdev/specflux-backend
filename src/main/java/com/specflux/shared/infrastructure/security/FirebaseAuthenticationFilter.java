@@ -46,7 +46,7 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
       String token = authHeader.substring(BEARER_PREFIX.length());
 
       try {
-        FirebaseToken firebaseToken = firebaseAuth.verifyIdToken(token);
+        FirebaseToken firebaseToken = firebaseAuth.verifyIdToken(token, true);
 
         FirebasePrincipal principal =
             new FirebasePrincipal(
@@ -64,6 +64,12 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
       } catch (FirebaseAuthException e) {
         log.warn("Failed to verify Firebase token: {}", e.getMessage());
         SecurityContextHolder.clearContext();
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response
+            .getWriter()
+            .write("{\"error\": \"Unauthorized\", \"message\": \"Invalid or revoked token\"}");
+        return;
       }
     }
 

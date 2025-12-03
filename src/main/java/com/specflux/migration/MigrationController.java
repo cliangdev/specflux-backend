@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 
 /** REST controller for migration operations. */
 @RestController
-@RequestMapping("/migration")
+@RequestMapping("/api/migration")
 @RequiredArgsConstructor
 public class MigrationController {
 

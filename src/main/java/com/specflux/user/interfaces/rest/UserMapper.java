@@ -21,7 +21,7 @@ public class UserMapper {
    */
   public UserDto toDto(User domain) {
     UserDto dto = new UserDto();
-    dto.setPublicId(domain.getPublicId());
+    dto.setId(domain.getPublicId());
     dto.setEmail(domain.getEmail());
     dto.setDisplayName(domain.getDisplayName());
     dto.setAvatarUrl(domain.getAvatarUrl());

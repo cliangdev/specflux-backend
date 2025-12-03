@@ -42,9 +42,9 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void getCurrentUser_shouldReturnCurrentUserProfile() throws Exception {
     mockMvc
-        .perform(get("/users/me").with(user("user")))
+        .perform(get("/api/users/me").with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value(testUser.getPublicId()))
+        .andExpect(jsonPath("$.id").value(testUser.getPublicId()))
         .andExpect(jsonPath("$.email").value(testUser.getEmail()))
         .andExpect(jsonPath("$.displayName").value(testUser.getDisplayName()))
         .andExpect(jsonPath("$.createdAt").exists());
@@ -52,7 +52,7 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
 
   @Test
   void getCurrentUser_withoutAuth_shouldReturn403() throws Exception {
-    mockMvc.perform(get("/users/me")).andExpect(status().isForbidden());
+    mockMvc.perform(get("/api/users/me")).andExpect(status().isForbidden());
   }
 
   @Test
@@ -62,12 +62,12 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            put("/users/me")
+            put("/api/users/me")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value(testUser.getPublicId()))
+        .andExpect(jsonPath("$.id").value(testUser.getPublicId()))
         .andExpect(jsonPath("$.displayName").value("New Display Name"));
 
     // Verify persisted
@@ -82,7 +82,7 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            put("/users/me")
+            put("/api/users/me")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -97,7 +97,7 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            put("/users/me")
+            put("/api/users/me")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
@@ -111,9 +111,9 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
             new User("usr_other123", "fb_other", "other@test.com", "Other User"));
 
     mockMvc
-        .perform(get("/users/{ref}", "usr_other123").with(user("user")))
+        .perform(get("/api/users/{ref}", "usr_other123").with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("usr_other123"))
+        .andExpect(jsonPath("$.id").value("usr_other123"))
         .andExpect(jsonPath("$.email").value("other@test.com"))
         .andExpect(jsonPath("$.displayName").value("Other User"));
   }
@@ -121,13 +121,13 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void getUser_notFound_shouldReturn404() throws Exception {
     mockMvc
-        .perform(get("/users/{ref}", "usr_nonexistent").with(user("user")))
+        .perform(get("/api/users/{ref}", "usr_nonexistent").with(user("user")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }
 
   @Test
   void getUser_withoutAuth_shouldReturn403() throws Exception {
-    mockMvc.perform(get("/users/{ref}", "usr_any")).andExpect(status().isForbidden());
+    mockMvc.perform(get("/api/users/{ref}", "usr_any")).andExpect(status().isForbidden());
   }
 }

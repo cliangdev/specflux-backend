@@ -60,7 +60,7 @@ tags:
 
 paths:
   # ==================== PROJECTS ====================
-  /projects:
+  /api/projects:
     get:
       operationId: listProjects
       summary: List user's projects
@@ -104,7 +104,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /projects/{ref}:
+  /api/projects/{ref}:
     parameters:
       - name: ref
         in: path
@@ -166,7 +166,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== EPICS ====================
-  /projects/{projectRef}/epics:
+  /api/projects/{projectRef}/epics:
     parameters:
       - name: projectRef
         in: path
@@ -223,7 +223,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /projects/{projectRef}/epics/{epicRef}:
+  /api/projects/{projectRef}/epics/{epicRef}:
     parameters:
       - name: projectRef
         in: path
@@ -290,7 +290,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== TASKS ====================
-  /projects/{projectRef}/tasks:
+  /api/projects/{projectRef}/tasks:
     parameters:
       - name: projectRef
         in: path
@@ -366,7 +366,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /projects/{projectRef}/tasks/{taskRef}:
+  /api/projects/{projectRef}/tasks/{taskRef}:
     parameters:
       - name: projectRef
         in: path
@@ -433,7 +433,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== TASK DEPENDENCIES ====================
-  /projects/{projectRef}/tasks/{taskRef}/dependencies:
+  /api/projects/{projectRef}/tasks/{taskRef}/dependencies:
     parameters:
       - name: projectRef
         in: path
@@ -489,7 +489,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /projects/{projectRef}/tasks/{taskRef}/dependencies/{dependsOnTaskRef}:
+  /api/projects/{projectRef}/tasks/{taskRef}/dependencies/{dependsOnTaskRef}:
     parameters:
       - name: projectRef
         in: path
@@ -521,7 +521,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== TASK ACCEPTANCE CRITERIA ====================
-  /projects/{projectRef}/tasks/{taskRef}/acceptance-criteria:
+  /api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria:
     parameters:
       - name: projectRef
         in: path
@@ -574,7 +574,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}:
+  /api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}:
     parameters:
       - name: projectRef
         in: path
@@ -647,7 +647,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== EPIC ACCEPTANCE CRITERIA ====================
-  /projects/{projectRef}/epics/{epicRef}/acceptance-criteria:
+  /api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria:
     parameters:
       - name: projectRef
         in: path
@@ -700,7 +700,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}:
+  /api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}:
     parameters:
       - name: projectRef
         in: path
@@ -773,7 +773,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== EPIC TASKS ====================
-  /projects/{projectRef}/epics/{epicRef}/tasks:
+  /api/projects/{projectRef}/epics/{epicRef}/tasks:
     parameters:
       - name: projectRef
         in: path
@@ -811,7 +811,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== EPIC DEPENDENCIES ====================
-  /projects/{projectRef}/epics/{epicRef}/dependencies:
+  /api/projects/{projectRef}/epics/{epicRef}/dependencies:
     parameters:
       - name: projectRef
         in: path
@@ -872,7 +872,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /projects/{projectRef}/epics/{epicRef}/dependencies/{depEpicRef}:
+  /api/projects/{projectRef}/epics/{epicRef}/dependencies/{depEpicRef}:
     parameters:
       - name: projectRef
         in: path
@@ -904,7 +904,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== RELEASES ====================
-  /projects/{projectRef}/releases:
+  /api/projects/{projectRef}/releases:
     parameters:
       - name: projectRef
         in: path
@@ -961,7 +961,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /projects/{projectRef}/releases/{releaseRef}:
+  /api/projects/{projectRef}/releases/{releaseRef}:
     parameters:
       - name: projectRef
         in: path
@@ -1028,7 +1028,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ==================== USERS ====================
-  /users/me:
+  /api/users/me:
     get:
       operationId: getCurrentUser
       summary: Get current authenticated user
@@ -1069,7 +1069,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /users/{ref}:
+  /api/users/{ref}:
     parameters:
       - name: ref
         in: path
@@ -1206,10 +1206,11 @@ components:
     # Project
     Project:
       type: object
-      required: [publicId, projectKey, name, ownerId, createdAt, updatedAt]
+      required: [id, projectKey, name, ownerId, createdAt, updatedAt]
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., proj_abc123xyz789)
         projectKey:
           type: string
         name:
@@ -1286,10 +1287,11 @@ components:
 
     Epic:
       type: object
-      required: [publicId, displayKey, projectId, title, status, createdById, createdAt, updatedAt]
+      required: [id, displayKey, projectId, title, status, createdById, createdAt, updatedAt]
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., epic_xyz789abc123)
         displayKey:
           type: string
         projectId:
@@ -1412,10 +1414,11 @@ components:
 
     Task:
       type: object
-      required: [publicId, displayKey, projectId, title, status, priority, requiresApproval, createdById, createdAt, updatedAt]
+      required: [id, displayKey, projectId, title, status, priority, requiresApproval, createdById, createdAt, updatedAt]
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., task_def456ghi789)
         displayKey:
           type: string
         projectId:
@@ -1531,10 +1534,11 @@ components:
 
     Release:
       type: object
-      required: [publicId, displayKey, projectId, name, status, createdAt, updatedAt]
+      required: [id, displayKey, projectId, name, status, createdAt, updatedAt]
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., rel_abc123xyz789)
         displayKey:
           type: string
         projectId:
@@ -1686,11 +1690,11 @@ components:
     # Users
     User:
       type: object
-      required: [publicId, email, displayName, createdAt]
+      required: [id, email, displayName, createdAt]
       properties:
-        publicId:
+        id:
           type: string
-          description: Public user identifier (usr_xxx)
+          description: Unique user identifier (e.g., usr_abc123def456)
           example: usr_abc123def456
         email:
           type: string

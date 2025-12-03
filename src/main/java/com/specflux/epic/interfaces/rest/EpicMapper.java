@@ -39,7 +39,7 @@ public class EpicMapper {
    */
   public EpicDto toDto(Epic domain) {
     EpicDto dto = new EpicDto();
-    dto.setPublicId(domain.getPublicId());
+    dto.setId(domain.getPublicId());
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
@@ -93,7 +93,7 @@ public class EpicMapper {
    */
   public EpicDto toDtoSimple(Epic domain) {
     EpicDto dto = new EpicDto();
-    dto.setPublicId(domain.getPublicId());
+    dto.setId(domain.getPublicId());
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());

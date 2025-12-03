@@ -1,5 +1,5 @@
 paths:
-  /projects:
+  /api/projects:
     get:
       operationId: listProjects
       summary: List user's projects
@@ -50,18 +50,18 @@ paths:
         '500':
           $ref: './components/responses.yaml#/components/responses/InternalServerError'
 
-  /projects/{ref}:
+  /api/projects/{ref}:
     parameters:
       - name: ref
         in: path
         required: true
-        description: Project public ID (proj_xxx) or project key (SPEC)
+        description: Project ID (proj_xxx) or project key (SPEC)
         schema:
           type: string
         examples:
-          publicId:
+          id:
             value: "proj_abc123xyz789"
-            summary: Using public ID
+            summary: Using ID
           projectKey:
             value: "SPEC"
             summary: Using project key

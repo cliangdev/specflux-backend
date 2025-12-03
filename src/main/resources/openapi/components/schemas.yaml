@@ -25,8 +25,9 @@ components:
     Project:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., proj_abc123xyz789)
           example: "proj_abc123xyz789"
         projectKey:
           type: string
@@ -52,7 +53,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - projectKey
         - name
         - ownerId
@@ -129,8 +130,9 @@ components:
     Epic:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., epic_xyz789abc123)
           example: "epic_xyz789abc123"
         displayKey:
           type: string
@@ -194,7 +196,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - displayKey
         - projectId
         - title
@@ -275,8 +277,9 @@ components:
     Task:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., task_def456ghi789)
           example: "task_def456ghi789"
         displayKey:
           type: string
@@ -330,7 +333,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - displayKey
         - projectId
         - title
@@ -418,8 +421,9 @@ components:
     Release:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., rel_abc123xyz789)
           example: "rel_abc123xyz789"
         displayKey:
           type: string
@@ -446,7 +450,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - displayKey
         - projectId
         - name

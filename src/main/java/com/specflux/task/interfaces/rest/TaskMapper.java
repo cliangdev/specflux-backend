@@ -25,7 +25,7 @@ public class TaskMapper {
    */
   public TaskDto toDto(Task domain) {
     TaskDto dto = new TaskDto();
-    dto.setPublicId(domain.getPublicId());
+    dto.setId(domain.getPublicId());
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());

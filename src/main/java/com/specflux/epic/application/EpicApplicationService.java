@@ -163,27 +163,10 @@ public class EpicApplicationService {
       String order,
       EpicStatusDto status) {
 
-    log.info(
+    log.debug(
         "[listEpics] Starting - projectRef={}, status={}, limit={}", projectRef, status, limit);
 
-    // Get current user for logging
-    try {
-      User currentUser = currentUserService.getCurrentUser();
-      log.info(
-          "[listEpics] Current user: id={}, email={}, publicId={}",
-          currentUser.getId(),
-          currentUser.getEmail(),
-          currentUser.getPublicId());
-    } catch (Exception e) {
-      log.warn("[listEpics] Could not get current user: {}", e.getMessage());
-    }
-
     Project project = refResolver.resolveProject(projectRef);
-    log.info(
-        "[listEpics] Resolved project: id={}, key={}, publicId={}",
-        project.getId(),
-        project.getProjectKey(),
-        project.getPublicId());
 
     // Parse cursor if present
     CursorData cursorData = decodeCursor(cursor);
@@ -195,11 +178,11 @@ public class EpicApplicationService {
       allEpics =
           epicRepository.findByProjectIdAndStatus(
               project.getId(), epicMapper.toDomainStatus(status));
-      log.info("[listEpics] Querying with status filter: {}", status);
+      log.debug("[listEpics] Querying with status filter: {}", status);
     } else {
       allEpics = epicRepository.findByProjectId(project.getId());
     }
-    log.info("[listEpics] Found {} epics for project {}", allEpics.size(), project.getId());
+    log.debug("[listEpics] Found {} epics for project {}", allEpics.size(), project.getId());
 
     long total = allEpics.size();
 
@@ -219,7 +202,6 @@ public class EpicApplicationService {
     boolean hasMore = sortedEpics.size() > limit;
     List<Epic> resultEpics = hasMore ? sortedEpics.subList(0, limit) : sortedEpics;
 
-    // Build response - use simple DTO for list (performance)
     EpicListResponseDto response = new EpicListResponseDto();
     response.setData(resultEpics.stream().map(epicMapper::toDtoSimple).toList());
 

@@ -55,12 +55,12 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/releases", testProject.getPublicId())
+            post("/api/projects/{projectRef}/releases", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.publicId").exists())
+        .andExpect(jsonPath("$.id").exists())
         .andExpect(jsonPath("$.displayKey").value("REL-R1"))
         .andExpect(jsonPath("$.projectId").value(testProject.getPublicId()))
         .andExpect(jsonPath("$.name").value("v1.0.0"))
@@ -77,7 +77,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/releases", testProject.getProjectKey())
+            post("/api/projects/{projectRef}/releases", testProject.getProjectKey())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -92,7 +92,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/releases", "nonexistent")
+            post("/api/projects/{projectRef}/releases", "nonexistent")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -108,12 +108,12 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/releases/{releaseRef}",
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
                     testProject.getPublicId(),
                     "rel_test123")
                 .with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("rel_test123"))
+        .andExpect(jsonPath("$.id").value("rel_test123"))
         .andExpect(jsonPath("$.displayKey").value("REL-R1"))
         .andExpect(jsonPath("$.name").value("v1.0.0"));
   }
@@ -126,12 +126,12 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/releases/{releaseRef}",
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
                     testProject.getProjectKey(),
                     "REL-R2")
                 .with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("rel_bykey"))
+        .andExpect(jsonPath("$.id").value("rel_bykey"))
         .andExpect(jsonPath("$.displayKey").value("REL-R2"));
   }
 
@@ -140,7 +140,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/releases/{releaseRef}",
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
                     testProject.getPublicId(),
                     "nonexistent")
                 .with(user("user")))
@@ -162,7 +162,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             put(
-                    "/projects/{projectRef}/releases/{releaseRef}",
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
                     testProject.getPublicId(),
                     "rel_update")
                 .with(user("user"))
@@ -187,7 +187,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             put(
-                    "/projects/{projectRef}/releases/{releaseRef}",
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
                     testProject.getPublicId(),
                     "rel_partial")
                 .with(user("user"))
@@ -207,7 +207,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             delete(
-                    "/projects/{projectRef}/releases/{releaseRef}",
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
                     testProject.getPublicId(),
                     "rel_delete")
                 .with(user("user")))
@@ -217,7 +217,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/releases/{releaseRef}",
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
                     testProject.getPublicId(),
                     "rel_delete")
                 .with(user("user")))
@@ -233,7 +233,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/releases", testProject.getPublicId())
+            get("/api/projects/{projectRef}/releases", testProject.getPublicId())
                 .with(user("user"))
                 .param("limit", "2"))
         .andExpect(status().isOk())
@@ -256,7 +256,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/releases", testProject.getPublicId())
+            get("/api/projects/{projectRef}/releases", testProject.getPublicId())
                 .with(user("user"))
                 .param("status", "IN_PROGRESS"))
         .andExpect(status().isOk())
@@ -271,7 +271,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/releases", testProject.getPublicId())
+            get("/api/projects/{projectRef}/releases", testProject.getPublicId())
                 .with(user("user"))
                 .param("sort", "title")
                 .param("order", "asc"))
@@ -284,7 +284,8 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
   void listReleases_emptyProject_shouldReturnEmptyList() throws Exception {
     mockMvc
         .perform(
-            get("/projects/{projectRef}/releases", testProject.getPublicId()).with(user("user")))
+            get("/api/projects/{projectRef}/releases", testProject.getPublicId())
+                .with(user("user")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data").isArray())
         .andExpect(jsonPath("$.data.length()").value(0))
@@ -299,7 +300,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     request1.setName("First Release");
     mockMvc
         .perform(
-            post("/projects/{projectRef}/releases", testProject.getPublicId())
+            post("/api/projects/{projectRef}/releases", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request1)))
@@ -311,7 +312,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
     request2.setName("Second Release");
     mockMvc
         .perform(
-            post("/projects/{projectRef}/releases", testProject.getPublicId())
+            post("/api/projects/{projectRef}/releases", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request2)))
@@ -322,7 +323,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void listReleases_withoutAuth_shouldReturn403() throws Exception {
     mockMvc
-        .perform(get("/projects/{projectRef}/releases", testProject.getPublicId()))
+        .perform(get("/api/projects/{projectRef}/releases", testProject.getPublicId()))
         .andExpect(status().isForbidden());
   }
 
@@ -333,7 +334,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/releases", testProject.getPublicId())
+            post("/api/projects/{projectRef}/releases", testProject.getPublicId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
