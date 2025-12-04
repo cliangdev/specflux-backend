@@ -14,6 +14,8 @@ import com.specflux.api.generated.model.CreateProjectRequestDto;
 import com.specflux.api.generated.model.UpdateProjectRequestDto;
 import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.project.domain.Project;
+import com.specflux.project.domain.ProjectMember;
+import com.specflux.project.domain.ProjectMemberRepository;
 import com.specflux.project.domain.ProjectRepository;
 
 /**
@@ -31,6 +33,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
   }
 
   @Autowired private ProjectRepository projectRepository;
+  @Autowired private ProjectMemberRepository projectMemberRepository;
 
   @Test
   void createProject_shouldReturnCreatedProject() throws Exception {
@@ -41,18 +44,27 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects")
+            post("/api/projects")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.publicId").exists())
+        .andExpect(jsonPath("$.id").exists())
         .andExpect(jsonPath("$.projectKey").value("SPEC"))
         .andExpect(jsonPath("$.name").value("SpecFlux"))
         .andExpect(jsonPath("$.description").value("A project management tool"))
         .andExpect(jsonPath("$.ownerId").value(testUser.getPublicId()))
         .andExpect(jsonPath("$.createdAt").exists())
         .andExpect(jsonPath("$.updatedAt").exists());
+
+    // Verify that the creator was added as a member with 'owner' role
+    Project createdProject = projectRepository.findByProjectKey("SPEC").orElseThrow();
+    ProjectMember membership =
+        projectMemberRepository
+            .findByProjectIdAndUserId(createdProject.getId(), testUser.getId())
+            .orElseThrow(
+                () -> new AssertionError("Membership should be created for project creator"));
+    assert membership.getRole() == ProjectMember.Role.owner : "Creator should have 'owner' role";
   }
 
   @Test
@@ -66,7 +78,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects")
+            post("/api/projects")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -82,7 +94,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects")
+            post("/api/projects")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -96,9 +108,9 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
         projectRepository.save(new Project("proj_test123", "TEST", "Test Project", testUser));
 
     mockMvc
-        .perform(get("/projects/{ref}", "proj_test123").with(user("user")))
+        .perform(get("/api/projects/{ref}", "proj_test123").with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("proj_test123"))
+        .andExpect(jsonPath("$.id").value("proj_test123"))
         .andExpect(jsonPath("$.projectKey").value("TEST"))
         .andExpect(jsonPath("$.name").value("Test Project"));
   }
@@ -109,16 +121,16 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
         projectRepository.save(new Project("proj_bykey", "BYKEY", "By Key Project", testUser));
 
     mockMvc
-        .perform(get("/projects/{ref}", "BYKEY").with(user("user")))
+        .perform(get("/api/projects/{ref}", "BYKEY").with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("proj_bykey"))
+        .andExpect(jsonPath("$.id").value("proj_bykey"))
         .andExpect(jsonPath("$.projectKey").value("BYKEY"));
   }
 
   @Test
   void getProject_notFound_shouldReturn404() throws Exception {
     mockMvc
-        .perform(get("/projects/{ref}", "nonexistent").with(user("user")))
+        .perform(get("/api/projects/{ref}", "nonexistent").with(user("user")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }
@@ -134,7 +146,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            put("/projects/{ref}", "proj_update")
+            put("/api/projects/{ref}", "proj_update")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -155,7 +167,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            put("/projects/{ref}", "proj_partial")
+            put("/api/projects/{ref}", "proj_partial")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -170,24 +182,30 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
         projectRepository.save(new Project("proj_delete", "DEL", "To Delete", testUser));
 
     mockMvc
-        .perform(delete("/projects/{ref}", "proj_delete").with(user("user")))
+        .perform(delete("/api/projects/{ref}", "proj_delete").with(user("user")))
         .andExpect(status().isNoContent());
 
     // Verify deletion
     mockMvc
-        .perform(get("/projects/{ref}", "proj_delete").with(user("user")))
+        .perform(get("/api/projects/{ref}", "proj_delete").with(user("user")))
         .andExpect(status().isNotFound());
   }
 
   @Test
   void listProjects_shouldReturnPaginatedList() throws Exception {
-    // Create test projects
-    projectRepository.save(new Project("proj_list1", "LST1", "Project 1", testUser));
-    projectRepository.save(new Project("proj_list2", "LST2", "Project 2", testUser));
-    projectRepository.save(new Project("proj_list3", "LST3", "Project 3", testUser));
+    // Create test projects with memberships
+    Project project1 =
+        projectRepository.save(new Project("proj_list1", "LST1", "Project 1", testUser));
+    projectMemberRepository.save(ProjectMember.createOwner(project1, testUser));
+    Project project2 =
+        projectRepository.save(new Project("proj_list2", "LST2", "Project 2", testUser));
+    projectMemberRepository.save(ProjectMember.createOwner(project2, testUser));
+    Project project3 =
+        projectRepository.save(new Project("proj_list3", "LST3", "Project 3", testUser));
+    projectMemberRepository.save(ProjectMember.createOwner(project3, testUser));
 
     mockMvc
-        .perform(get("/projects").with(user("user")).param("limit", "2"))
+        .perform(get("/api/projects").with(user("user")).param("limit", "2"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data").isArray())
         .andExpect(jsonPath("$.data.length()").value(2))
@@ -198,11 +216,17 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
   @Test
   void listProjects_withSort_shouldReturnSortedList() throws Exception {
-    projectRepository.save(new Project("proj_z", "ZETA", "Zeta Project", testUser));
-    projectRepository.save(new Project("proj_a", "ALPH", "Alpha Project", testUser));
+    // Create test projects with memberships
+    Project projectZ =
+        projectRepository.save(new Project("proj_z", "ZETA", "Zeta Project", testUser));
+    projectMemberRepository.save(ProjectMember.createOwner(projectZ, testUser));
+    Project projectA =
+        projectRepository.save(new Project("proj_a", "ALPH", "Alpha Project", testUser));
+    projectMemberRepository.save(ProjectMember.createOwner(projectA, testUser));
 
     mockMvc
-        .perform(get("/projects").with(user("user")).param("sort", "name").param("order", "asc"))
+        .perform(
+            get("/api/projects").with(user("user")).param("sort", "name").param("order", "asc"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data[0].name").value("Alpha Project"))
         .andExpect(jsonPath("$.data[1].name").value("Zeta Project"));
@@ -211,7 +235,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void listProjects_withoutAuth_shouldReturn403() throws Exception {
     // Without authentication, should be forbidden
-    mockMvc.perform(get("/projects")).andExpect(status().isForbidden());
+    mockMvc.perform(get("/api/projects")).andExpect(status().isForbidden());
   }
 
   @Test
@@ -222,7 +246,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects")
+            post("/api/projects")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());

@@ -73,3 +73,8 @@ application-local.properties
 
 # claude
 CLAUDE.md
+
+# Firebase emulator data (keep firebase.json and Dockerfile tracked)
+firebase/.cache/
+firebase/data/
+firebase/firebase-export-*/

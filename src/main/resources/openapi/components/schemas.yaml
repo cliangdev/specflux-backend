@@ -25,8 +25,9 @@ components:
     Project:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., proj_abc123xyz789)
           example: "proj_abc123xyz789"
         projectKey:
           type: string
@@ -52,7 +53,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - projectKey
         - name
         - ownerId
@@ -105,11 +106,33 @@ components:
       type: string
       enum: [PLANNING, IN_PROGRESS, BLOCKED, COMPLETED, CANCELLED]
 
+    TaskStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 10
+        done:
+          type: integer
+          example: 5
+        inProgress:
+          type: integer
+          example: 2
+        backlog:
+          type: integer
+          example: 3
+      required:
+        - total
+        - done
+        - inProgress
+        - backlog
+
     Epic:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., epic_xyz789abc123)
           example: "epic_xyz789abc123"
         displayKey:
           type: string
@@ -117,6 +140,11 @@ components:
         projectId:
           type: string
           example: "proj_abc123"
+        releaseId:
+          type: string
+          nullable: true
+          example: "rel_abc123"
+          description: Public ID of the associated release
         title:
           type: string
           example: "User Authentication"
@@ -129,6 +157,35 @@ components:
           type: string
           format: date
           nullable: true
+        prdFilePath:
+          type: string
+          nullable: true
+          example: "/docs/prd/auth.md"
+          description: Path to the PRD document
+        epicFilePath:
+          type: string
+          nullable: true
+          example: "/docs/epics/auth.md"
+          description: Path to the epic document
+        dependsOn:
+          type: array
+          items:
+            type: string
+          description: List of epic public IDs this epic depends on
+          example: ["epic_abc123", "epic_def456"]
+        phase:
+          type: integer
+          minimum: 1
+          description: Computed phase based on dependency depth
+          example: 1
+        taskStats:
+          $ref: '#/components/schemas/TaskStats'
+        progressPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Completion percentage based on task completion
+          example: 50
         createdById:
           type: string
           example: "user_abc123"
@@ -139,7 +196,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - displayKey
         - projectId
         - title
@@ -161,6 +218,15 @@ components:
           type: string
           format: date
           nullable: true
+        releaseRef:
+          type: string
+          nullable: true
+          description: Release publicId or displayKey to assign
+        prdFilePath:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Path to the PRD document
       required:
         - title
 
@@ -179,6 +245,15 @@ components:
           type: string
           format: date
           nullable: true
+        releaseRef:
+          type: string
+          nullable: true
+          description: Release publicId or displayKey to assign
+        prdFilePath:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Path to the PRD document
 
     EpicListResponse:
       type: object
@@ -202,8 +277,9 @@ components:
     Task:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., task_def456ghi789)
           example: "task_def456ghi789"
         displayKey:
           type: string
@@ -257,7 +333,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - displayKey
         - projectId
         - title
@@ -345,8 +421,9 @@ components:
     Release:
       type: object
       properties:
-        publicId:
+        id:
           type: string
+          description: Unique identifier (e.g., rel_abc123xyz789)
           example: "rel_abc123xyz789"
         displayKey:
           type: string
@@ -373,7 +450,7 @@ components:
           type: string
           format: date-time
       required:
-        - publicId
+        - id
         - displayKey
         - projectId
         - name

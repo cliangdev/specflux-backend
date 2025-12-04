@@ -25,9 +25,14 @@ services:
     container_name: specflux-firebase-emulator
     ports:
       - "9099:9099"   # Auth emulator
+      - "4000:4000"   # Emulator UI
     volumes:
       - ./firebase:/home/node/firebase
-    command: firebase emulators:start --only auth --project demo-specflux
+      - firebase_cache:/home/node/.cache
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    command: firebase emulators:start --only auth --project demo-specflux --import=./data --export-on-exit=./data
     working_dir: /home/node/firebase
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:9099/', r => process.exit(r.statusCode ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -39,3 +44,5 @@ services:
 volumes:
   postgres_data:
     name: specflux-postgres-data
+  firebase_cache:
+    name: specflux-firebase-cache

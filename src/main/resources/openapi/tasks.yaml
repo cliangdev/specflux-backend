@@ -1,5 +1,5 @@
 paths:
-  /projects/{projectRef}/tasks:
+  /api/projects/{projectRef}/tasks:
     parameters:
       - name: projectRef
         in: path
@@ -89,7 +89,7 @@ paths:
         '500':
           $ref: './components/responses.yaml#/components/responses/InternalServerError'
 
-  /projects/{projectRef}/tasks/{taskRef}:
+  /api/projects/{projectRef}/tasks/{taskRef}:
     parameters:
       - name: projectRef
         in: path
@@ -100,13 +100,13 @@ paths:
       - name: taskRef
         in: path
         required: true
-        description: Task public ID (task_xxx) or display key (SPEC-42)
+        description: Task ID (task_xxx) or display key (SPEC-42)
         schema:
           type: string
         examples:
-          publicId:
+          id:
             value: "task_def456ghi789"
-            summary: Using public ID
+            summary: Using ID
           displayKey:
             value: "SPEC-42"
             summary: Using display key

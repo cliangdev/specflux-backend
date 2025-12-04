@@ -27,28 +27,28 @@ tags:
 
 paths:
   # Project endpoints
-  /projects:
-    $ref: './projects.yaml#/paths/~1projects'
-  /projects/{ref}:
-    $ref: './projects.yaml#/paths/~1projects~1{ref}'
+  /api/projects:
+    $ref: './projects.yaml#/paths/~1api~1projects'
+  /api/projects/{ref}:
+    $ref: './projects.yaml#/paths/~1api~1projects~1{ref}'
 
   # Epic endpoints
-  /projects/{projectRef}/epics:
-    $ref: './epics.yaml#/paths/~1projects~1{projectRef}~1epics'
-  /projects/{projectRef}/epics/{epicRef}:
-    $ref: './epics.yaml#/paths/~1projects~1{projectRef}~1epics~1{epicRef}'
+  /api/projects/{projectRef}/epics:
+    $ref: './epics.yaml#/paths/~1api~1projects~1{projectRef}~1epics'
+  /api/projects/{projectRef}/epics/{epicRef}:
+    $ref: './epics.yaml#/paths/~1api~1projects~1{projectRef}~1epics~1{epicRef}'
 
   # Task endpoints
-  /projects/{projectRef}/tasks:
-    $ref: './tasks.yaml#/paths/~1projects~1{projectRef}~1tasks'
-  /projects/{projectRef}/tasks/{taskRef}:
-    $ref: './tasks.yaml#/paths/~1projects~1{projectRef}~1tasks~1{taskRef}'
+  /api/projects/{projectRef}/tasks:
+    $ref: './tasks.yaml#/paths/~1api~1projects~1{projectRef}~1tasks'
+  /api/projects/{projectRef}/tasks/{taskRef}:
+    $ref: './tasks.yaml#/paths/~1api~1projects~1{projectRef}~1tasks~1{taskRef}'
 
   # Release endpoints
-  /projects/{projectRef}/releases:
-    $ref: './releases.yaml#/paths/~1projects~1{projectRef}~1releases'
-  /projects/{projectRef}/releases/{releaseRef}:
-    $ref: './releases.yaml#/paths/~1projects~1{projectRef}~1releases~1{releaseRef}'
+  /api/projects/{projectRef}/releases:
+    $ref: './releases.yaml#/paths/~1api~1projects~1{projectRef}~1releases'
+  /api/projects/{projectRef}/releases/{releaseRef}:
+    $ref: './releases.yaml#/paths/~1api~1projects~1{projectRef}~1releases~1{releaseRef}'
 
 components:
   securitySchemes:

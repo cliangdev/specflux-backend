@@ -57,12 +57,12 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/epics", testProject.getPublicId())
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.publicId").exists())
+        .andExpect(jsonPath("$.id").exists())
         .andExpect(jsonPath("$.displayKey").value("EPIC-E1"))
         .andExpect(jsonPath("$.projectId").value(testProject.getPublicId()))
         .andExpect(jsonPath("$.title").value("User Authentication Feature"))
@@ -80,7 +80,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/epics", testProject.getProjectKey())
+            post("/api/projects/{projectRef}/epics", testProject.getProjectKey())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -95,7 +95,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/epics", "nonexistent")
+            post("/api/projects/{projectRef}/epics", "nonexistent")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -111,10 +111,13 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_test123")
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_test123")
                 .with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("epic_test123"))
+        .andExpect(jsonPath("$.id").value("epic_test123"))
         .andExpect(jsonPath("$.displayKey").value("EPIC-E1"))
         .andExpect(jsonPath("$.title").value("Test Epic"));
   }
@@ -127,10 +130,13 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics/{epicRef}", testProject.getProjectKey(), "EPIC-E2")
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getProjectKey(),
+                    "EPIC-E2")
                 .with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("epic_bykey"))
+        .andExpect(jsonPath("$.id").value("epic_bykey"))
         .andExpect(jsonPath("$.displayKey").value("EPIC-E2"));
   }
 
@@ -138,7 +144,10 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void getEpic_notFound_shouldReturn404() throws Exception {
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "nonexistent")
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "nonexistent")
                 .with(user("user")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
@@ -157,7 +166,10 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            put("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_update")
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_update")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -179,7 +191,10 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            put("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_partial")
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_partial")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -198,7 +213,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             delete(
-                    "/projects/{projectRef}/epics/{epicRef}",
+                    "/api/projects/{projectRef}/epics/{epicRef}",
                     testProject.getPublicId(),
                     "epic_delete")
                 .with(user("user")))
@@ -207,7 +222,10 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     // Verify deletion
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics/{epicRef}", testProject.getPublicId(), "epic_delete")
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_delete")
                 .with(user("user")))
         .andExpect(status().isNotFound());
   }
@@ -221,7 +239,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics", testProject.getPublicId())
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .with(user("user"))
                 .param("limit", "2"))
         .andExpect(status().isOk())
@@ -244,7 +262,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics", testProject.getPublicId())
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .with(user("user"))
                 .param("status", "IN_PROGRESS"))
         .andExpect(status().isOk())
@@ -259,7 +277,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/epics", testProject.getPublicId())
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .with(user("user"))
                 .param("sort", "title")
                 .param("order", "asc"))
@@ -271,7 +289,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void listEpics_emptyProject_shouldReturnEmptyList() throws Exception {
     mockMvc
-        .perform(get("/projects/{projectRef}/epics", testProject.getPublicId()).with(user("user")))
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId()).with(user("user")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data").isArray())
         .andExpect(jsonPath("$.data.length()").value(0))
@@ -286,7 +305,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     request1.setTitle("First Epic");
     mockMvc
         .perform(
-            post("/projects/{projectRef}/epics", testProject.getPublicId())
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request1)))
@@ -298,7 +317,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     request2.setTitle("Second Epic");
     mockMvc
         .perform(
-            post("/projects/{projectRef}/epics", testProject.getPublicId())
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request2)))
@@ -309,7 +328,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void listEpics_withoutAuth_shouldReturn403() throws Exception {
     mockMvc
-        .perform(get("/projects/{projectRef}/epics", testProject.getPublicId()))
+        .perform(get("/api/projects/{projectRef}/epics", testProject.getPublicId()))
         .andExpect(status().isForbidden());
   }
 
@@ -320,7 +339,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/epics", testProject.getPublicId())
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
@@ -340,7 +359,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     epic.getPublicId())
                 .with(user("user"))
@@ -366,7 +385,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     epic.getPublicId())
                 .with(user("user"))
@@ -380,7 +399,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     epic.getPublicId())
                 .with(user("user"))
@@ -392,7 +411,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     epic.getPublicId())
                 .with(user("user")))
@@ -416,7 +435,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
         mockMvc
             .perform(
                 post(
-                        "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                        "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                         testProject.getPublicId(),
                         epic.getPublicId())
                     .with(user("user"))
@@ -433,7 +452,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     epic.getPublicId(),
                     criteriaId)
@@ -456,7 +475,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
         mockMvc
             .perform(
                 post(
-                        "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                        "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                         testProject.getPublicId(),
                         epic.getPublicId())
                     .with(user("user"))
@@ -477,7 +496,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             put(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     epic.getPublicId(),
                     criteriaId)
@@ -503,7 +522,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
         mockMvc
             .perform(
                 post(
-                        "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                        "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                         testProject.getPublicId(),
                         epic.getPublicId())
                     .with(user("user"))
@@ -520,7 +539,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             delete(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     epic.getPublicId(),
                     criteriaId)
@@ -531,7 +550,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     epic.getPublicId(),
                     criteriaId)
@@ -547,7 +566,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     epic.getPublicId(),
                     999999L)
@@ -560,7 +579,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                "/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
+                "/api/projects/{projectRef}/epics/{epicRef}/acceptance-criteria",
                 testProject.getPublicId(),
                 "epic_123"))
         .andExpect(status().isForbidden());

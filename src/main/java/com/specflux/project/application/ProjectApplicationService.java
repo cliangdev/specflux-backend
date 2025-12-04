@@ -5,8 +5,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -19,6 +17,8 @@ import com.specflux.api.generated.model.ProjectDto;
 import com.specflux.api.generated.model.ProjectListResponseDto;
 import com.specflux.api.generated.model.UpdateProjectRequestDto;
 import com.specflux.project.domain.Project;
+import com.specflux.project.domain.ProjectMember;
+import com.specflux.project.domain.ProjectMemberRepository;
 import com.specflux.project.domain.ProjectRepository;
 import com.specflux.project.interfaces.rest.ProjectMapper;
 import com.specflux.shared.application.CurrentUserService;
@@ -34,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class ProjectApplicationService {
 
   private final ProjectRepository projectRepository;
+  private final ProjectMemberRepository projectMemberRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
   private final TransactionTemplate transactionTemplate;
@@ -62,6 +63,11 @@ public class ProjectApplicationService {
           project.setDescription(request.getDescription());
 
           Project saved = projectRepository.save(project);
+
+          // Add owner as a member with 'owner' role
+          ProjectMember ownerMember = ProjectMember.createOwner(saved, owner);
+          projectMemberRepository.save(ownerMember);
+
           return ProjectMapper.toDto(saved);
         });
   }
@@ -128,36 +134,26 @@ public class ProjectApplicationService {
     Sort.Direction direction =
         "asc".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
-    // Fetch one extra to determine hasMore
-    PageRequest pageRequest = PageRequest.of(0, limit + 1, Sort.by(direction, sortField));
-
     List<Project> projects;
     long total;
 
-    if (cursorData != null) {
-      // For cursor-based pagination, we'd ideally filter by the cursor field
-      // For simplicity, using offset-based under the hood
-      PageRequest cursorPageRequest =
-          PageRequest.of(cursorData.offset() / limit, limit + 1, Sort.by(direction, sortField));
-      Page<Project> page = projectRepository.findAll(cursorPageRequest);
-      projects =
-          page.getContent().stream()
-              .filter(p -> p.getOwner().getId().equals(currentUser.getId()))
-              .toList();
-      total = projectRepository.findByOwnerId(currentUser.getId()).size();
-    } else {
-      List<Project> allProjects = projectRepository.findByOwnerId(currentUser.getId());
-      total = allProjects.size();
-      projects =
-          allProjects.stream()
-              .sorted(
-                  (a, b) -> {
-                    int cmp = compareByField(a, b, sortField);
-                    return direction == Sort.Direction.DESC ? -cmp : cmp;
-                  })
-              .limit(limit + 1)
-              .toList();
-    }
+    // Get all projects where user is a member
+    List<Project> allProjects = projectMemberRepository.findProjectsByUserId(currentUser.getId());
+    total = allProjects.size();
+
+    // Apply sorting
+    List<Project> sortedProjects =
+        allProjects.stream()
+            .sorted(
+                (a, b) -> {
+                  int cmp = compareByField(a, b, sortField);
+                  return direction == Sort.Direction.DESC ? -cmp : cmp;
+                })
+            .toList();
+
+    // Apply cursor-based pagination (offset under the hood)
+    int offset = cursorData != null ? cursorData.offset() : 0;
+    projects = sortedProjects.stream().skip(offset).limit(limit + 1).toList();
 
     boolean hasMore = projects.size() > limit;
     List<Project> resultProjects = hasMore ? projects.subList(0, limit) : projects;
@@ -171,7 +167,7 @@ public class ProjectApplicationService {
     pagination.setHasMore(hasMore);
 
     if (hasMore) {
-      int nextOffset = (cursorData != null ? cursorData.offset() : 0) + limit;
+      int nextOffset = offset + limit;
       pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
     }
     if (cursorData != null && cursorData.offset() > 0) {

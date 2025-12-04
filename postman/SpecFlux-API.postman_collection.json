@@ -18,7 +18,57 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "{{baseUrl}}"
+      "value": "http://localhost:8090/api"
+    },
+    {
+      "key": "firebaseEmulatorHost",
+      "value": "localhost:9099",
+      "description": "Firebase Auth Emulator host:port"
+    },
+    {
+      "key": "testEmail",
+      "value": "dev@specflux.local",
+      "description": "Test user email for Firebase Emulator"
+    },
+    {
+      "key": "testPassword",
+      "value": "devpass123",
+      "description": "Test user password for Firebase Emulator"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "description": "Firebase ID token - populated by auth requests"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "description": "Firebase refresh token - populated by auth requests"
+    },
+    {
+      "key": "projectRef",
+      "value": "SPECFLUCMI",
+      "description": "Project key or publicId"
+    },
+    {
+      "key": "userRef",
+      "value": "",
+      "description": "User publicId - populated by Get Current User"
+    },
+    {
+      "key": "epicRef",
+      "value": "",
+      "description": "Epic publicId - populated by List/Create Epic"
+    },
+    {
+      "key": "taskRef",
+      "value": "",
+      "description": "Task publicId - populated by List/Create Task"
+    },
+    {
+      "key": "releaseRef",
+      "value": "",
+      "description": "Release publicId - populated by List/Create Release"
     }
   ],
   "item": [
@@ -261,6 +311,27 @@
       "item": [
         {
           "name": "List Projects",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        const firstProject = response.data[0];",
+                  "        pm.environment.set('projectRef', firstProject.projectKey || firstProject.publicId);",
+                  "        console.log('Saved projectRef:', firstProject.projectKey || firstProject.publicId);",
+                  "    }",
+                  "    pm.test('Response has data array', function() {",
+                  "        pm.expect(response.data).to.be.an('array');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -280,11 +351,28 @@
                 }
               ]
             },
-            "description": "List all projects for the current user."
+            "description": "List all projects for the current user.\n\n**Auto-saves:** First project's `projectKey` to `projectRef` variable."
           }
         },
         {
           "name": "Create Project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.projectKey || response.publicId) {",
+                  "        pm.environment.set('projectRef', response.projectKey || response.publicId);",
+                  "        console.log('Saved projectRef:', response.projectKey || response.publicId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -302,7 +390,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["projects"]
             },
-            "description": "Create a new project.\n\n- `projectKey`: Unique identifier (uppercase, 2-10 chars)\n- `name`: Display name\n- `description`: Optional description"
+            "description": "Create a new project.\n\n- `projectKey`: Unique identifier (uppercase, 2-10 chars)\n- `name`: Display name\n- `description`: Optional description\n\n**Auto-saves:** `projectRef` variable."
           }
         },
         {
@@ -311,18 +399,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/projects/:ref",
+              "raw": "{{baseUrl}}/projects/{{projectRef}}",
               "host": ["{{baseUrl}}"],
-              "path": ["projects", ":ref"],
-              "variable": [
-                {
-                  "key": "ref",
-                  "value": "SPEC",
-                  "description": "Project key or public ID"
-                }
-              ]
+              "path": ["projects", "{{projectRef}}"]
             },
-            "description": "Get a project by its key or public ID."
+            "description": "Get a project by its key or public ID.\n\nUses `projectRef` from List/Create response."
           }
         },
         {
@@ -340,16 +421,9 @@
               "raw": "{\n  \"name\": \"SpecFlux Updated\",\n  \"description\": \"Updated description\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/projects/:ref",
+              "raw": "{{baseUrl}}/projects/{{projectRef}}",
               "host": ["{{baseUrl}}"],
-              "path": ["projects", ":ref"],
-              "variable": [
-                {
-                  "key": "ref",
-                  "value": "SPEC",
-                  "description": "Project key or public ID"
-                }
-              ]
+              "path": ["projects", "{{projectRef}}"]
             },
             "description": "Update a project's name and/or description."
           }
@@ -360,18 +434,534 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/projects/:ref",
+              "raw": "{{baseUrl}}/projects/{{projectRef}}",
               "host": ["{{baseUrl}}"],
-              "path": ["projects", ":ref"],
-              "variable": [
+              "path": ["projects", "{{projectRef}}"]
+            },
+            "description": "Delete a project."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Epics",
+      "description": "Epic management - list, create, update, delete epics within a project.",
+      "item": [
+        {
+          "name": "List Epics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        const firstEpic = response.data[0];",
+                  "        pm.environment.set('epicRef', firstEpic.publicId);",
+                  "        console.log('Saved epicRef:', firstEpic.publicId);",
+                  "    }",
+                  "    pm.test('Response has data array', function() {",
+                  "        pm.expect(response.data).to.be.an('array');",
+                  "    });",
+                  "    pm.test('Epics have publicId', function() {",
+                  "        if (response.data.length > 0) {",
+                  "            pm.expect(response.data[0].publicId).to.match(/^epic_/);",
+                  "        }",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics"],
+              "query": [
                 {
-                  "key": "ref",
-                  "value": "SPEC",
-                  "description": "Project key or public ID"
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "releaseRef",
+                  "value": "",
+                  "disabled": true
                 }
               ]
             },
-            "description": "Delete a project."
+            "description": "List all epics for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (DRAFT, IN_PROGRESS, etc.)\n- `releaseRef`: Filter by release publicId\n\n**Auto-saves:** First epic's `publicId` to `epicRef` variable."
+          }
+        },
+        {
+          "name": "Get Epic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Epic has publicId', function() {",
+                  "        pm.expect(response.publicId).to.match(/^epic_/);",
+                  "    });",
+                  "    pm.test('Epic has title', function() {",
+                  "        pm.expect(response.title).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}"]
+            },
+            "description": "Get an epic by its public ID.\n\nUses `epicRef` from List Epics response."
+          }
+        },
+        {
+          "name": "Create Epic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.publicId) {",
+                  "        pm.environment.set('epicRef', response.publicId);",
+                  "        console.log('Saved epicRef:', response.publicId);",
+                  "    }",
+                  "    pm.test('Epic has publicId', function() {",
+                  "        pm.expect(response.publicId).to.match(/^epic_/);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"User Authentication\",\n  \"description\": \"Implement complete user authentication flow\",\n  \"status\": \"DRAFT\",\n  \"priority\": \"HIGH\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics"]
+            },
+            "description": "Create a new epic in a project.\n\n**Required:**\n- `title`: Epic title\n\n**Optional:**\n- `description`: Epic description\n- `status`: DRAFT, IN_PROGRESS, REVIEW, DONE\n- `priority`: LOW, MEDIUM, HIGH, CRITICAL\n- `releaseRef`: Release to assign epic to\n\n**Auto-saves:** `epicRef` variable."
+          }
+        },
+        {
+          "name": "Update Epic",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"User Authentication - Updated\",\n  \"status\": \"IN_PROGRESS\",\n  \"priority\": \"CRITICAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}"]
+            },
+            "description": "Update an epic's properties.\n\nAll fields are optional - only provided fields will be updated."
+          }
+        },
+        {
+          "name": "Delete Epic",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}"]
+            },
+            "description": "Delete an epic.\n\n**Warning:** This may also delete associated tasks depending on cascade settings."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Tasks",
+      "description": "Task management - list, create, update, delete tasks within a project.",
+      "item": [
+        {
+          "name": "List Tasks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        const firstTask = response.data[0];",
+                  "        pm.environment.set('taskRef', firstTask.publicId);",
+                  "        console.log('Saved taskRef:', firstTask.publicId);",
+                  "    }",
+                  "    pm.test('Response has data array', function() {",
+                  "        pm.expect(response.data).to.be.an('array');",
+                  "    });",
+                  "    pm.test('Tasks have publicId', function() {",
+                  "        if (response.data.length > 0) {",
+                  "            pm.expect(response.data[0].publicId).to.match(/^task_/);",
+                  "        }",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "epicRef",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all tasks for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (BACKLOG, TODO, IN_PROGRESS, etc.)\n- `epicRef`: Filter by epic publicId\n\n**Auto-saves:** First task's `publicId` to `taskRef` variable."
+          }
+        },
+        {
+          "name": "Get Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Task has publicId', function() {",
+                  "        pm.expect(response.publicId).to.match(/^task_/);",
+                  "    });",
+                  "    pm.test('Task has title', function() {",
+                  "        pm.expect(response.title).to.be.a('string');",
+                  "    });",
+                  "    pm.test('Task has status', function() {",
+                  "        pm.expect(response.status).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}"]
+            },
+            "description": "Get a task by its public ID.\n\nUses `taskRef` from List Tasks response."
+          }
+        },
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.publicId) {",
+                  "        pm.environment.set('taskRef', response.publicId);",
+                  "        console.log('Saved taskRef:', response.publicId);",
+                  "    }",
+                  "    pm.test('Task has publicId', function() {",
+                  "        pm.expect(response.publicId).to.match(/^task_/);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Implement login form\",\n  \"description\": \"Create React login form with email/password fields\",\n  \"status\": \"BACKLOG\",\n  \"epicRef\": \"{{epicRef}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks"]
+            },
+            "description": "Create a new task in a project.\n\n**Required:**\n- `title`: Task title\n\n**Optional:**\n- `description`: Task description\n- `status`: BACKLOG, TODO, IN_PROGRESS, IN_REVIEW, DONE\n- `epicRef`: Epic to assign task to\n- `requiresApproval`: Whether task needs approval before completion\n- `estimatedDuration`: Estimated time (e.g., \"2h\", \"3d\")\n\n**Auto-saves:** `taskRef` variable."
+          }
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Implement login form - Updated\",\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}"]
+            },
+            "description": "Update a task's properties.\n\nAll fields are optional - only provided fields will be updated."
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}"]
+            },
+            "description": "Delete a task."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Releases",
+      "description": "Release management - list, create, update, delete releases within a project.",
+      "item": [
+        {
+          "name": "List Releases",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        const firstRelease = response.data[0];",
+                  "        pm.environment.set('releaseRef', firstRelease.publicId);",
+                  "        console.log('Saved releaseRef:', firstRelease.publicId);",
+                  "    }",
+                  "    pm.test('Response has data array', function() {",
+                  "        pm.expect(response.data).to.be.an('array');",
+                  "    });",
+                  "    pm.test('Releases have publicId', function() {",
+                  "        if (response.data.length > 0) {",
+                  "            pm.expect(response.data[0].publicId).to.match(/^rel_/);",
+                  "        }",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/releases?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "releases"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all releases for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (PLANNED, IN_PROGRESS, RELEASED)\n\n**Auto-saves:** First release's `publicId` to `releaseRef` variable."
+          }
+        },
+        {
+          "name": "Get Release",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Release has publicId', function() {",
+                  "        pm.expect(response.publicId).to.match(/^rel_/);",
+                  "    });",
+                  "    pm.test('Release has name', function() {",
+                  "        pm.expect(response.name).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/releases/{{releaseRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "releases", "{{releaseRef}}"]
+            },
+            "description": "Get a release by its public ID.\n\nUses `releaseRef` from List Releases response."
+          }
+        },
+        {
+          "name": "Create Release",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.publicId) {",
+                  "        pm.environment.set('releaseRef', response.publicId);",
+                  "        console.log('Saved releaseRef:', response.publicId);",
+                  "    }",
+                  "    pm.test('Release has publicId', function() {",
+                  "        pm.expect(response.publicId).to.match(/^rel_/);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"v1.0.0\",\n  \"description\": \"Initial release with core features\",\n  \"status\": \"PLANNED\",\n  \"targetDate\": \"2025-03-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/releases",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "releases"]
+            },
+            "description": "Create a new release in a project.\n\n**Required:**\n- `name`: Release name/version\n\n**Optional:**\n- `description`: Release description\n- `status`: PLANNED, IN_PROGRESS, RELEASED\n- `targetDate`: Target release date (ISO 8601)\n\n**Auto-saves:** `releaseRef` variable."
+          }
+        },
+        {
+          "name": "Update Release",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"v1.0.0-rc1\",\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/releases/{{releaseRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "releases", "{{releaseRef}}"]
+            },
+            "description": "Update a release's properties.\n\nAll fields are optional - only provided fields will be updated."
+          }
+        },
+        {
+          "name": "Delete Release",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/releases/{{releaseRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "releases", "{{releaseRef}}"]
+            },
+            "description": "Delete a release.\n\n**Note:** Epics assigned to this release will have their release reference cleared."
           }
         }
       ]

@@ -69,12 +69,12 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/tasks", testProject.getPublicId())
+            post("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.publicId").exists())
+        .andExpect(jsonPath("$.id").exists())
         .andExpect(jsonPath("$.displayKey").value("TASK-1"))
         .andExpect(jsonPath("$.projectId").value(testProject.getPublicId()))
         .andExpect(jsonPath("$.title").value("Implement authentication"))
@@ -95,7 +95,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/tasks", testProject.getPublicId())
+            post("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -111,7 +111,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/tasks", "nonexistent")
+            post("/api/projects/{projectRef}/tasks", "nonexistent")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -127,10 +127,13 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks/{taskRef}", testProject.getPublicId(), "task_test123")
+            get(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_test123")
                 .with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("task_test123"))
+        .andExpect(jsonPath("$.id").value("task_test123"))
         .andExpect(jsonPath("$.displayKey").value("TASK-1"))
         .andExpect(jsonPath("$.title").value("Test Task"));
   }
@@ -143,10 +146,13 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks/{taskRef}", testProject.getProjectKey(), "TASK-42")
+            get(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getProjectKey(),
+                    "TASK-42")
                 .with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publicId").value("task_bykey"))
+        .andExpect(jsonPath("$.id").value("task_bykey"))
         .andExpect(jsonPath("$.displayKey").value("TASK-42"));
   }
 
@@ -154,7 +160,10 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
   void getTask_notFound_shouldReturn404() throws Exception {
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks/{taskRef}", testProject.getPublicId(), "nonexistent")
+            get(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "nonexistent")
                 .with(user("user")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
@@ -175,7 +184,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             patch(
-                    "/projects/{projectRef}/tasks/{taskRef}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
                     testProject.getPublicId(),
                     "task_update")
                 .with(user("user"))
@@ -202,7 +211,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             patch(
-                    "/projects/{projectRef}/tasks/{taskRef}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
                     testProject.getPublicId(),
                     "task_partial")
                 .with(user("user"))
@@ -224,7 +233,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             delete(
-                    "/projects/{projectRef}/tasks/{taskRef}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
                     testProject.getPublicId(),
                     "task_delete")
                 .with(user("user")))
@@ -233,7 +242,10 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     // Verify deletion
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks/{taskRef}", testProject.getPublicId(), "task_delete")
+            get(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_delete")
                 .with(user("user")))
         .andExpect(status().isNotFound());
   }
@@ -247,7 +259,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks", testProject.getPublicId())
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .param("limit", "2"))
         .andExpect(status().isOk())
@@ -270,7 +282,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks", testProject.getPublicId())
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .param("status", "IN_PROGRESS"))
         .andExpect(status().isOk())
@@ -290,7 +302,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks", testProject.getPublicId())
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .param("priority", "HIGH"))
         .andExpect(status().isOk())
@@ -309,7 +321,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks", testProject.getPublicId())
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .param("epicRef", testEpic.getPublicId()))
         .andExpect(status().isOk())
@@ -326,7 +338,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks", testProject.getPublicId())
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .param("search", "auth"))
         .andExpect(status().isOk())
@@ -341,7 +353,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            get("/projects/{projectRef}/tasks", testProject.getPublicId())
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .param("sort", "title")
                 .param("order", "asc"))
@@ -353,7 +365,8 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void listTasks_emptyProject_shouldReturnEmptyList() throws Exception {
     mockMvc
-        .perform(get("/projects/{projectRef}/tasks", testProject.getPublicId()).with(user("user")))
+        .perform(
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId()).with(user("user")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data").isArray())
         .andExpect(jsonPath("$.data.length()").value(0))
@@ -368,7 +381,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     request1.setTitle("First Task");
     mockMvc
         .perform(
-            post("/projects/{projectRef}/tasks", testProject.getPublicId())
+            post("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request1)))
@@ -380,7 +393,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     request2.setTitle("Second Task");
     mockMvc
         .perform(
-            post("/projects/{projectRef}/tasks", testProject.getPublicId())
+            post("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request2)))
@@ -391,7 +404,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void listTasks_withoutAuth_shouldReturn403() throws Exception {
     mockMvc
-        .perform(get("/projects/{projectRef}/tasks", testProject.getPublicId()))
+        .perform(get("/api/projects/{projectRef}/tasks", testProject.getPublicId()))
         .andExpect(status().isForbidden());
   }
 
@@ -402,7 +415,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/projects/{projectRef}/tasks", testProject.getPublicId())
+            post("/api/projects/{projectRef}/tasks", testProject.getPublicId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
@@ -423,7 +436,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                     testProject.getPublicId(),
                     task2.getPublicId())
                 .with(user("user"))
@@ -449,7 +462,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                     testProject.getProjectKey(),
                     "TASK-2")
                 .with(user("user"))
@@ -473,7 +486,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                     testProject.getPublicId(),
                     task2.getPublicId())
                 .with(user("user"))
@@ -485,7 +498,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                     testProject.getPublicId(),
                     task2.getPublicId())
                 .with(user("user")))
@@ -503,7 +516,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user")))
@@ -526,7 +539,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                     testProject.getPublicId(),
                     task2.getPublicId())
                 .with(user("user"))
@@ -538,7 +551,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             delete(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies/{dependsOnTaskRef}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies/{dependsOnTaskRef}",
                     testProject.getPublicId(),
                     task2.getPublicId(),
                     task1.getPublicId())
@@ -549,7 +562,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                     testProject.getPublicId(),
                     task2.getPublicId())
                 .with(user("user")))
@@ -567,7 +580,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             delete(
-                    "/projects/{projectRef}/tasks/{taskRef}/dependencies/{dependsOnTaskRef}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/dependencies/{dependsOnTaskRef}",
                     testProject.getPublicId(),
                     task2.getPublicId(),
                     task1.getPublicId())
@@ -580,7 +593,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                "/projects/{projectRef}/tasks/{taskRef}/dependencies",
+                "/api/projects/{projectRef}/tasks/{taskRef}/dependencies",
                 testProject.getPublicId(),
                 "task_123"))
         .andExpect(status().isForbidden());
@@ -600,7 +613,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user"))
@@ -625,7 +638,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user"))
@@ -640,7 +653,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user"))
@@ -662,7 +675,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user"))
@@ -676,7 +689,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             post(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user"))
@@ -688,7 +701,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user")))
@@ -709,7 +722,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                     testProject.getPublicId(),
                     task.getPublicId())
                 .with(user("user")))
@@ -731,7 +744,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
         mockMvc
             .perform(
                 post(
-                        "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                        "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                         testProject.getPublicId(),
                         task.getPublicId())
                     .with(user("user"))
@@ -748,7 +761,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     task.getPublicId(),
                     criteriaId)
@@ -771,7 +784,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
         mockMvc
             .perform(
                 post(
-                        "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                        "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                         testProject.getPublicId(),
                         task.getPublicId())
                     .with(user("user"))
@@ -793,7 +806,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             put(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     task.getPublicId(),
                     criteriaId)
@@ -820,7 +833,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
         mockMvc
             .perform(
                 post(
-                        "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                        "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                         testProject.getPublicId(),
                         task.getPublicId())
                     .with(user("user"))
@@ -837,7 +850,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             delete(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     task.getPublicId(),
                     criteriaId)
@@ -848,7 +861,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     task.getPublicId(),
                     criteriaId)
@@ -864,7 +877,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                    "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
+                    "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria/{criteriaId}",
                     testProject.getPublicId(),
                     task.getPublicId(),
                     999999L)
@@ -877,7 +890,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(
             get(
-                "/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
+                "/api/projects/{projectRef}/tasks/{taskRef}/acceptance-criteria",
                 testProject.getPublicId(),
                 "task_123"))
         .andExpect(status().isForbidden());

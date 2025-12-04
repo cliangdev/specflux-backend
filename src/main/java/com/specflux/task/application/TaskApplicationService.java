@@ -35,8 +35,10 @@ import com.specflux.task.interfaces.rest.TaskMapper;
 import com.specflux.user.domain.User;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /** Application service for Task operations. */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TaskApplicationService {
@@ -193,12 +195,21 @@ public class TaskApplicationService {
 
     Project project = refResolver.resolveProject(projectRef);
 
+    log.info(
+        "[listTasks] projectRef={}, status={}, epicRef={}, priority={}, search={}",
+        projectRef,
+        status,
+        epicRef,
+        priority,
+        search);
+
     // Parse cursor if present
     CursorData cursorData = decodeCursor(cursor);
     int offset = cursorData != null ? cursorData.offset() : 0;
 
     // Get all tasks for project
     List<Task> allTasks = taskRepository.findByProjectId(project.getId());
+    log.info("[listTasks] Found {} total tasks for project {}", allTasks.size(), project.getId());
 
     // Apply filters
     Stream<Task> taskStream = allTasks.stream();
@@ -234,6 +245,7 @@ public class TaskApplicationService {
 
     List<Task> filteredTasks = taskStream.toList();
     long total = filteredTasks.size();
+    log.info("[listTasks] After filters: {} tasks remaining", total);
 
     // Sort field mapping
     String sortField = mapSortField(sort);

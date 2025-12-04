@@ -23,7 +23,7 @@ public class ReleaseMapper {
    */
   public ReleaseDto toDto(Release domain) {
     ReleaseDto dto = new ReleaseDto();
-    dto.setPublicId(domain.getPublicId());
+    dto.setId(domain.getPublicId());
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setName(domain.getName());

@@ -16,26 +16,39 @@ import com.specflux.api.generated.model.CursorPaginationDto;
 import com.specflux.api.generated.model.EpicDto;
 import com.specflux.api.generated.model.EpicListResponseDto;
 import com.specflux.api.generated.model.EpicStatusDto;
+import com.specflux.api.generated.model.TaskListResponseDto;
 import com.specflux.api.generated.model.UpdateEpicRequestDto;
 import com.specflux.epic.domain.Epic;
+import com.specflux.epic.domain.EpicDependency;
+import com.specflux.epic.domain.EpicDependencyRepository;
 import com.specflux.epic.domain.EpicRepository;
 import com.specflux.epic.interfaces.rest.EpicMapper;
 import com.specflux.project.domain.Project;
+import com.specflux.release.domain.Release;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.shared.interfaces.rest.RefResolver;
+import com.specflux.task.domain.Task;
+import com.specflux.task.domain.TaskRepository;
+import com.specflux.task.interfaces.rest.TaskMapper;
 import com.specflux.user.domain.User;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /** Application service for Epic operations. */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EpicApplicationService {
 
   private final EpicRepository epicRepository;
+  private final EpicDependencyRepository epicDependencyRepository;
+  private final TaskRepository taskRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
   private final TransactionTemplate transactionTemplate;
+  private final EpicMapper epicMapper;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   /**
@@ -62,7 +75,7 @@ public class EpicApplicationService {
           epic.setTargetDate(request.getTargetDate());
 
           Epic saved = epicRepository.save(epic);
-          return EpicMapper.toDto(saved);
+          return epicMapper.toDto(saved);
         });
   }
 
@@ -76,7 +89,7 @@ public class EpicApplicationService {
   public EpicDto getEpic(String projectRef, String epicRef) {
     Project project = refResolver.resolveProject(projectRef);
     Epic epic = refResolver.resolveEpic(project, epicRef);
-    return EpicMapper.toDto(epic);
+    return epicMapper.toDto(epic);
   }
 
   /**
@@ -98,14 +111,25 @@ public class EpicApplicationService {
       epic.setDescription(request.getDescription());
     }
     if (request.getStatus() != null) {
-      epic.setStatus(EpicMapper.toDomainStatus(request.getStatus()));
+      epic.setStatus(epicMapper.toDomainStatus(request.getStatus()));
     }
     if (request.getTargetDate() != null) {
       epic.setTargetDate(request.getTargetDate());
     }
+    if (request.getPrdFilePath() != null) {
+      epic.setPrdFilePath(request.getPrdFilePath());
+    }
+    if (request.getReleaseRef() != null) {
+      if (request.getReleaseRef().isBlank()) {
+        epic.setReleaseId(null);
+      } else {
+        Release release = refResolver.resolveRelease(project, request.getReleaseRef());
+        epic.setReleaseId(release.getId());
+      }
+    }
 
     Epic saved = transactionTemplate.execute(status -> epicRepository.save(epic));
-    return EpicMapper.toDto(saved);
+    return epicMapper.toDto(saved);
   }
 
   /**
@@ -139,6 +163,9 @@ public class EpicApplicationService {
       String order,
       EpicStatusDto status) {
 
+    log.debug(
+        "[listEpics] Starting - projectRef={}, status={}, limit={}", projectRef, status, limit);
+
     Project project = refResolver.resolveProject(projectRef);
 
     // Parse cursor if present
@@ -150,10 +177,12 @@ public class EpicApplicationService {
     if (status != null) {
       allEpics =
           epicRepository.findByProjectIdAndStatus(
-              project.getId(), EpicMapper.toDomainStatus(status));
+              project.getId(), epicMapper.toDomainStatus(status));
+      log.debug("[listEpics] Querying with status filter: {}", status);
     } else {
       allEpics = epicRepository.findByProjectId(project.getId());
     }
+    log.debug("[listEpics] Found {} epics for project {}", allEpics.size(), project.getId());
 
     long total = allEpics.size();
 
@@ -173,9 +202,8 @@ public class EpicApplicationService {
     boolean hasMore = sortedEpics.size() > limit;
     List<Epic> resultEpics = hasMore ? sortedEpics.subList(0, limit) : sortedEpics;
 
-    // Build response
     EpicListResponseDto response = new EpicListResponseDto();
-    response.setData(resultEpics.stream().map(EpicMapper::toDto).toList());
+    response.setData(resultEpics.stream().map(epicMapper::toDtoSimple).toList());
 
     CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);
@@ -192,6 +220,145 @@ public class EpicApplicationService {
 
     response.setPagination(pagination);
     return response;
+  }
+
+  // ==================== TASKS ====================
+
+  /**
+   * Lists tasks belonging to an epic.
+   *
+   * @param projectRef the project reference
+   * @param epicRef the epic reference
+   * @param cursor pagination cursor
+   * @param limit page size
+   * @param status optional status filter
+   * @return paginated task list
+   */
+  public TaskListResponseDto listEpicTasks(
+      String projectRef, String epicRef, String cursor, Integer limit, String status) {
+    Project project = refResolver.resolveProject(projectRef);
+    Epic epic = refResolver.resolveEpic(project, epicRef);
+
+    List<Task> tasks = taskRepository.findByEpicId(epic.getId());
+
+    // Filter by status if provided
+    if (status != null && !status.isBlank()) {
+      tasks = tasks.stream().filter(t -> t.getStatus().name().equalsIgnoreCase(status)).toList();
+    }
+
+    long total = tasks.size();
+
+    // Parse cursor to get offset
+    CursorData cursorData = decodeCursor(cursor);
+    int offset = cursorData != null ? cursorData.offset() : 0;
+
+    // Apply pagination with cursor offset
+    int effectiveLimit = limit != null ? Math.min(limit, 100) : 20;
+    List<Task> pagedTasks = tasks.stream().skip(offset).limit(effectiveLimit + 1).toList();
+
+    boolean hasMore = pagedTasks.size() > effectiveLimit;
+    List<Task> resultTasks = hasMore ? pagedTasks.subList(0, effectiveLimit) : pagedTasks;
+
+    TaskListResponseDto response = new TaskListResponseDto();
+    response.setData(resultTasks.stream().map(TaskMapper::toDto).toList());
+
+    CursorPaginationDto pagination = new CursorPaginationDto();
+    pagination.setTotal(total);
+    pagination.setHasMore(hasMore);
+
+    if (hasMore) {
+      int nextOffset = offset + effectiveLimit;
+      pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
+    }
+    if (offset > 0) {
+      int prevOffset = Math.max(0, offset - effectiveLimit);
+      pagination.setPrevCursor(encodeCursor(new CursorData(prevOffset)));
+    }
+
+    response.setPagination(pagination);
+
+    return response;
+  }
+
+  // ==================== DEPENDENCIES ====================
+
+  /**
+   * Lists epics that this epic depends on.
+   *
+   * @param projectRef the project reference
+   * @param epicRef the epic reference
+   * @return list of dependency epics
+   */
+  public EpicListResponseDto listEpicDependencies(String projectRef, String epicRef) {
+    Project project = refResolver.resolveProject(projectRef);
+    Epic epic = refResolver.resolveEpic(project, epicRef);
+
+    List<EpicDependency> dependencies = epicDependencyRepository.findByEpicId(epic.getId());
+    List<Epic> dependencyEpics =
+        dependencies.stream().map(EpicDependency::getDependsOnEpic).toList();
+
+    EpicListResponseDto response = new EpicListResponseDto();
+    response.setData(dependencyEpics.stream().map(epicMapper::toDtoSimple).toList());
+
+    CursorPaginationDto pagination = new CursorPaginationDto();
+    pagination.setTotal((long) dependencyEpics.size());
+    pagination.setHasMore(false);
+    response.setPagination(pagination);
+
+    return response;
+  }
+
+  /**
+   * Adds a dependency to an epic.
+   *
+   * @param projectRef the project reference
+   * @param epicRef the epic reference
+   * @param dependsOnEpicRef the epic to depend on
+   * @return the updated epic DTO
+   */
+  public EpicDto addEpicDependency(String projectRef, String epicRef, String dependsOnEpicRef) {
+    Project project = refResolver.resolveProject(projectRef);
+    Epic epic = refResolver.resolveEpic(project, epicRef);
+    Epic dependsOnEpic = refResolver.resolveEpic(project, dependsOnEpicRef);
+
+    // Check for self-dependency
+    if (epic.getId().equals(dependsOnEpic.getId())) {
+      throw new IllegalArgumentException("Epic cannot depend on itself");
+    }
+
+    // Check if dependency already exists
+    if (epicDependencyRepository
+        .findByEpicIdAndDependsOnEpicId(epic.getId(), dependsOnEpic.getId())
+        .isPresent()) {
+      throw new IllegalArgumentException("Dependency already exists");
+    }
+
+    // TODO: Check for circular dependencies
+
+    EpicDependency dependency = new EpicDependency(epic, dependsOnEpic);
+    transactionTemplate.executeWithoutResult(status -> epicDependencyRepository.save(dependency));
+
+    return epicMapper.toDto(epic);
+  }
+
+  /**
+   * Removes a dependency from an epic.
+   *
+   * @param projectRef the project reference
+   * @param epicRef the epic reference
+   * @param depEpicRef the dependency epic to remove
+   */
+  public void removeEpicDependency(String projectRef, String epicRef, String depEpicRef) {
+    Project project = refResolver.resolveProject(projectRef);
+    Epic epic = refResolver.resolveEpic(project, epicRef);
+    Epic dependsOnEpic = refResolver.resolveEpic(project, depEpicRef);
+
+    EpicDependency dependency =
+        epicDependencyRepository
+            .findByEpicIdAndDependsOnEpicId(epic.getId(), dependsOnEpic.getId())
+            .orElseThrow(() -> new EntityNotFoundException("Dependency not found"));
+
+    transactionTemplate.executeWithoutResult(status -> epicDependencyRepository.delete(dependency));
   }
 
   private Comparator<Epic> getComparator(String field) {

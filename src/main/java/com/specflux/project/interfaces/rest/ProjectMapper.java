@@ -21,7 +21,7 @@ public class ProjectMapper {
    */
   public ProjectDto toDto(Project domain) {
     ProjectDto dto = new ProjectDto();
-    dto.setPublicId(domain.getPublicId());
+    dto.setId(domain.getPublicId());
     dto.setProjectKey(domain.getProjectKey());
     dto.setName(domain.getName());
     dto.setDescription(domain.getDescription());
