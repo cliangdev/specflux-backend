@@ -35,11 +35,9 @@ import com.specflux.task.domain.TaskStatus;
  */
 class TaskControllerTest extends AbstractControllerIntegrationTest {
 
-  private static final String SCHEMA_NAME = "task_controller_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, TaskControllerTest.class);
   }
 
   @Autowired private ProjectRepository projectRepository;

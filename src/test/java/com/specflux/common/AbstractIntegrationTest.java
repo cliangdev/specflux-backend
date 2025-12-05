@@ -13,17 +13,19 @@ import com.specflux.testcontainers.SharedPostgreSQLContainer;
 /**
  * Base class for integration tests with schema isolation.
  *
- * <p>Each test class extending this gets its own database schema, enabling parallel test execution
- * without data conflicts.
+ * <p>Test classes are automatically distributed across a fixed number of schema buckets using
+ * consistent hashing. Classes in the same bucket share a Spring context and connection pool, which
+ * reduces resource usage while maintaining isolation via {@code @Transactional} rollback.
  *
- * <p>Schema name is defined by each subclass via the @DynamicPropertySource method.
- *
- * <p>Flyway automatically creates tables in the schema for each test class.
+ * <p>Flyway automatically creates tables in each schema bucket.
  */
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers
 public abstract class AbstractIntegrationTest {
+
+  /** Number of schema buckets. More buckets = more isolation but more connections. */
+  private static final int SCHEMA_BUCKET_COUNT = 4;
 
   @Container
   protected static final PostgreSQLContainer<?> POSTGRES = SharedPostgreSQLContainer.getInstance();
@@ -47,7 +49,28 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
+   * Configure schema using automatic bucket assignment based on test class name.
+   *
+   * <p>Test classes are distributed across {@link #SCHEMA_BUCKET_COUNT} buckets using consistent
+   * hashing. Classes that hash to the same bucket will share a Spring context and connection pool.
+   *
+   * <p>This provides a balance between test isolation (via @Transactional rollback) and resource
+   * efficiency (fewer connection pools).
+   *
+   * @param registry the dynamic property registry
+   * @param testClass the test class to compute bucket for
+   */
+  protected static void configureSchemaForClass(
+      DynamicPropertyRegistry registry, Class<?> testClass) {
+    int bucket = Math.abs(testClass.getSimpleName().hashCode() % SCHEMA_BUCKET_COUNT);
+    String schemaName = "test_bucket_" + bucket;
+    configureSchema(registry, schemaName);
+  }
+
+  /**
    * Helper method for subclasses to configure schema-specific properties.
+   *
+   * <p>Prefer using {@link #configureSchemaForClass} for automatic bucket assignment.
    *
    * @param registry the dynamic property registry
    * @param schemaName the unique schema name for this test class

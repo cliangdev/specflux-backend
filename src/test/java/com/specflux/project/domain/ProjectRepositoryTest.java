@@ -24,11 +24,9 @@ import com.specflux.user.domain.UserRepository;
 @Transactional
 class ProjectRepositoryTest extends AbstractIntegrationTest {
 
-  private static final String SCHEMA_NAME = "project_repository_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, ProjectRepositoryTest.class);
   }
 
   @Autowired private ProjectRepository projectRepository;

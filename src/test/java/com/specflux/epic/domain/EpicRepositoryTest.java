@@ -27,11 +27,9 @@ import com.specflux.user.domain.UserRepository;
 @Transactional
 class EpicRepositoryTest extends AbstractIntegrationTest {
 
-  private static final String SCHEMA_NAME = "epic_repository_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, EpicRepositoryTest.class);
   }
 
   @Autowired private EpicRepository epicRepository;

@@ -30,11 +30,9 @@ import com.specflux.project.domain.ProjectRepository;
  */
 class EpicControllerTest extends AbstractControllerIntegrationTest {
 
-  private static final String SCHEMA_NAME = "epic_controller_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, EpicControllerTest.class);
   }
 
   @Autowired private ProjectRepository projectRepository;

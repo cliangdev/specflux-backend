@@ -26,6 +26,8 @@ public final class SharedPostgreSQLContainer
               .withDatabaseName("specflux_test")
               .withUsername("test")
               .withPassword("test")
+              // Increase max_connections to support multiple test contexts with separate pools
+              .withCommand("postgres", "-c", "max_connections=300")
               .withReuse(true);
     }
     return container;

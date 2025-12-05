@@ -1,5 +1,11 @@
 # Test Profile Configuration
 spring:
+  datasource:
+    hikari:
+      # Reduce pool size for tests - each test class creates its own Spring context
+      # with separate connection pool. Smaller pools prevent "too many clients" errors.
+      maximum-pool-size: 3
+      minimum-idle: 1
   jpa:
     hibernate:
       ddl-auto: validate
