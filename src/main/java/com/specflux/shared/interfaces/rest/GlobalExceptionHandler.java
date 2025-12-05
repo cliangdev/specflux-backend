@@ -66,6 +66,14 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
   }
 
+  @ExceptionHandler(ResourceNotFoundException.class)
+  public ResponseEntity<ErrorResponseDto> handleResourceNotFound(ResourceNotFoundException ex) {
+    ErrorResponseDto error = new ErrorResponseDto();
+    error.setError(ex.getMessage());
+    error.setCode("NOT_FOUND");
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+  }
+
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<ErrorResponseDto> handleAccessDenied(AccessDeniedException ex) {
     ErrorResponseDto error = new ErrorResponseDto();
@@ -93,6 +101,13 @@ public class GlobalExceptionHandler {
   /** Exception thrown when user doesn't have permission to access a resource. */
   public static class AccessDeniedException extends RuntimeException {
     public AccessDeniedException(String message) {
+      super(message);
+    }
+  }
+
+  /** Exception thrown when a resource is not found. */
+  public static class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
       super(message);
     }
   }

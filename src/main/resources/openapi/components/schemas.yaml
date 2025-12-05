@@ -43,6 +43,11 @@ components:
           type: string
           nullable: true
           example: "AI-powered project management"
+        localPath:
+          type: string
+          nullable: true
+          description: Local filesystem path to project directory
+          example: "/Users/dev/projects/specflux"
         ownerId:
           type: string
           example: "user_abc123"
@@ -77,6 +82,11 @@ components:
           type: string
           nullable: true
           example: "AI-powered project management"
+        localPath:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Local filesystem path to project directory
       required:
         - projectKey
         - name
@@ -90,6 +100,10 @@ components:
         description:
           type: string
           nullable: true
+        localPath:
+          type: string
+          nullable: true
+          maxLength: 1000
 
     ProjectListResponse:
       type: object

@@ -61,6 +61,7 @@ public class ProjectApplicationService {
           Project project =
               new Project(publicId, request.getProjectKey(), request.getName(), owner);
           project.setDescription(request.getDescription());
+          project.setLocalPath(request.getLocalPath());
 
           Project saved = projectRepository.save(project);
 
@@ -98,6 +99,9 @@ public class ProjectApplicationService {
     }
     if (request.getDescription() != null) {
       project.setDescription(request.getDescription());
+    }
+    if (request.getLocalPath() != null) {
+      project.setLocalPath(request.getLocalPath());
     }
 
     Project saved = transactionTemplate.execute(status -> projectRepository.save(project));

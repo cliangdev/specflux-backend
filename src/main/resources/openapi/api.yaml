@@ -57,6 +57,22 @@ tags:
     description: |
       User profile management endpoints.
       Users are auto-provisioned on first Firebase authentication (GitHub OAuth).
+  - name: Repositories
+    description: |
+      Repository management endpoints.
+      Repositories are Git repositories associated with a project.
+  - name: Skills
+    description: |
+      Skill management endpoints.
+      Skills are Claude Code skill definitions stored in .claude/skills/.
+  - name: Agents
+    description: |
+      Agent management endpoints.
+      Agents are Claude Code agent definitions stored in .claude/agents/.
+  - name: McpServers
+    description: |
+      MCP Server management endpoints.
+      MCP servers are Model Context Protocol servers configured in .claude/.mcp.json.
 
 paths:
   # ==================== PROJECTS ====================
@@ -1095,6 +1111,503 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # ==================== REPOSITORIES ====================
+  /api/projects/{projectRef}/repositories:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listRepositories
+      summary: List repositories in a project
+      tags: [Repositories]
+      responses:
+        '200':
+          description: List of repositories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createRepository
+      summary: Add a repository to a project
+      tags: [Repositories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRepositoryRequest'
+      responses:
+        '201':
+          description: Repository created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{projectRef}/repositories/{repoRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repoRef
+        in: path
+        required: true
+        description: Repository public ID (repo_xxx)
+        schema:
+          type: string
+
+    get:
+      operationId: getRepository
+      summary: Get a repository
+      tags: [Repositories]
+      responses:
+        '200':
+          description: Repository details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateRepository
+      summary: Update a repository
+      tags: [Repositories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepositoryRequest'
+      responses:
+        '200':
+          description: Repository updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteRepository
+      summary: Remove a repository from a project
+      tags: [Repositories]
+      responses:
+        '204':
+          description: Repository deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== SKILLS ====================
+  /api/projects/{projectRef}/skills:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listSkills
+      summary: List skills in a project
+      tags: [Skills]
+      responses:
+        '200':
+          description: List of skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createSkill
+      summary: Add a skill to a project
+      tags: [Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSkillRequest'
+      responses:
+        '201':
+          description: Skill created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{projectRef}/skills/{skillRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: skillRef
+        in: path
+        required: true
+        description: Skill public ID (skill_xxx)
+        schema:
+          type: string
+
+    get:
+      operationId: getSkill
+      summary: Get a skill
+      tags: [Skills]
+      responses:
+        '200':
+          description: Skill details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateSkill
+      summary: Update a skill
+      tags: [Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSkillRequest'
+      responses:
+        '200':
+          description: Skill updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteSkill
+      summary: Remove a skill from a project
+      tags: [Skills]
+      responses:
+        '204':
+          description: Skill deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== AGENTS ====================
+  /api/projects/{projectRef}/agents:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listAgents
+      summary: List agents in a project
+      tags: [Agents]
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createAgent
+      summary: Add an agent to a project
+      tags: [Agents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '201':
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{projectRef}/agents/{agentRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: agentRef
+        in: path
+        required: true
+        description: Agent public ID (agent_xxx)
+        schema:
+          type: string
+
+    get:
+      operationId: getAgent
+      summary: Get an agent
+      tags: [Agents]
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateAgent
+      summary: Update an agent
+      tags: [Agents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAgentRequest'
+      responses:
+        '200':
+          description: Agent updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteAgent
+      summary: Remove an agent from a project
+      tags: [Agents]
+      responses:
+        '204':
+          description: Agent deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== MCP SERVERS ====================
+  /api/projects/{projectRef}/mcp-servers:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listMcpServers
+      summary: List MCP servers in a project
+      tags: [McpServers]
+      responses:
+        '200':
+          description: List of MCP servers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpServerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createMcpServer
+      summary: Add an MCP server to a project
+      tags: [McpServers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMcpServerRequest'
+      responses:
+        '201':
+          description: MCP server created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpServer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{projectRef}/mcp-servers/{serverRef}:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: serverRef
+        in: path
+        required: true
+        description: MCP server public ID (mcp_xxx)
+        schema:
+          type: string
+
+    get:
+      operationId: getMcpServer
+      summary: Get an MCP server
+      tags: [McpServers]
+      responses:
+        '200':
+          description: MCP server details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpServer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateMcpServer
+      summary: Update an MCP server
+      tags: [McpServers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMcpServerRequest'
+      responses:
+        '200':
+          description: MCP server updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpServer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteMcpServer
+      summary: Remove an MCP server from a project
+      tags: [McpServers]
+      responses:
+        '204':
+          description: MCP server deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{projectRef}/mcp-servers/{serverRef}/toggle:
+    parameters:
+      - name: projectRef
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: serverRef
+        in: path
+        required: true
+        schema:
+          type: string
+
+    post:
+      operationId: toggleMcpServer
+      summary: Toggle MCP server active status
+      tags: [McpServers]
+      responses:
+        '200':
+          description: MCP server toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpServer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1218,6 +1731,10 @@ components:
         description:
           type: string
           nullable: true
+        localPath:
+          type: string
+          nullable: true
+          description: Local filesystem path to project directory
         ownerId:
           type: string
         createdAt:
@@ -1242,6 +1759,11 @@ components:
         description:
           type: string
           nullable: true
+        localPath:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Local filesystem path to project directory
 
     UpdateProjectRequest:
       type: object
@@ -1252,6 +1774,11 @@ components:
         description:
           type: string
           nullable: true
+        localPath:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Local filesystem path to project directory
 
     ProjectListResponse:
       type: object
@@ -1727,3 +2254,291 @@ components:
           nullable: true
           maxLength: 500
           description: New avatar URL (null to remove)
+
+    # Repository
+    RepositoryStatus:
+      type: string
+      enum: [READY, SYNCING, ERROR]
+
+    Repository:
+      type: object
+      required: [id, projectId, name, path, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Unique identifier (e.g., repo_abc123xyz789)
+        projectId:
+          type: string
+        name:
+          type: string
+        path:
+          type: string
+          description: Local filesystem path to repository
+        gitUrl:
+          type: string
+          nullable: true
+        defaultBranch:
+          type: string
+        status:
+          $ref: '#/components/schemas/RepositoryStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateRepositoryRequest:
+      type: object
+      required: [name, path]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        path:
+          type: string
+          maxLength: 1000
+        gitUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+        defaultBranch:
+          type: string
+          maxLength: 100
+
+    UpdateRepositoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        gitUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+        defaultBranch:
+          type: string
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/RepositoryStatus'
+
+    RepositoryListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Repository'
+
+    # Skill
+    Skill:
+      type: object
+      required: [id, projectId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Unique identifier (e.g., skill_abc123xyz789)
+        projectId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        folderPath:
+          type: string
+          nullable: true
+          description: Path to skill folder in .claude/skills/
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateSkillRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        folderPath:
+          type: string
+          nullable: true
+          maxLength: 1000
+
+    UpdateSkillRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        folderPath:
+          type: string
+          nullable: true
+          maxLength: 1000
+
+    SkillListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+
+    # Agent
+    Agent:
+      type: object
+      required: [id, projectId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Unique identifier (e.g., agent_abc123xyz789)
+        projectId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        filePath:
+          type: string
+          nullable: true
+          description: Path to agent file in .claude/agents/
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAgentRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        filePath:
+          type: string
+          nullable: true
+          maxLength: 1000
+
+    UpdateAgentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        filePath:
+          type: string
+          nullable: true
+          maxLength: 1000
+
+    AgentListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+
+    # MCP Server
+    McpServer:
+      type: object
+      required: [id, projectId, name, command, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Unique identifier (e.g., mcp_abc123xyz789)
+        projectId:
+          type: string
+        name:
+          type: string
+        command:
+          type: string
+          description: Command to run the MCP server
+        args:
+          type: array
+          items:
+            type: string
+          description: Command arguments
+        envVars:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          description: Environment variables
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateMcpServerRequest:
+      type: object
+      required: [name, command]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        command:
+          type: string
+          maxLength: 500
+        args:
+          type: array
+          items:
+            type: string
+        envVars:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateMcpServerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        command:
+          type: string
+          maxLength: 500
+        args:
+          type: array
+          items:
+            type: string
+        envVars:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    McpServerListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpServer'

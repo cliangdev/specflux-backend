@@ -45,6 +45,10 @@ public class Project extends AggregateRoot<Long> {
   @Column(columnDefinition = "TEXT")
   private String description;
 
+  @Setter
+  @Column(name = "local_path", length = 1000)
+  private String localPath;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "owner_id", nullable = false)
   private User owner;

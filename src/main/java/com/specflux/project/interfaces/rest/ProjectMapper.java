@@ -25,6 +25,7 @@ public class ProjectMapper {
     dto.setProjectKey(domain.getProjectKey());
     dto.setName(domain.getName());
     dto.setDescription(domain.getDescription());
+    dto.setLocalPath(domain.getLocalPath());
     dto.setOwnerId(domain.getOwner().getPublicId());
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
