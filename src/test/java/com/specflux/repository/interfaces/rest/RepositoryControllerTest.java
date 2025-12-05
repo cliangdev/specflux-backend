@@ -26,11 +26,9 @@ import com.specflux.repository.domain.RepositoryRepository;
  */
 class RepositoryControllerTest extends AbstractControllerIntegrationTest {
 
-  private static final String SCHEMA_NAME = "repository_controller_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, RepositoryControllerTest.class);
   }
 
   @Autowired private ProjectRepository projectRepository;

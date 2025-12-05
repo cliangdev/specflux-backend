@@ -26,11 +26,9 @@ import com.specflux.skill.domain.SkillRepository;
  */
 class SkillControllerTest extends AbstractControllerIntegrationTest {
 
-  private static final String SCHEMA_NAME = "skill_controller_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, SkillControllerTest.class);
   }
 
   @Autowired private ProjectRepository projectRepository;

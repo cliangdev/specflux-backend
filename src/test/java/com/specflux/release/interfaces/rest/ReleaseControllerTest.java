@@ -28,11 +28,9 @@ import com.specflux.release.domain.ReleaseStatus;
  */
 class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
-  private static final String SCHEMA_NAME = "release_controller_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, ReleaseControllerTest.class);
   }
 
   @Autowired private ProjectRepository projectRepository;

@@ -26,11 +26,9 @@ import com.specflux.project.domain.ProjectRepository;
  */
 class McpServerControllerTest extends AbstractControllerIntegrationTest {
 
-  private static final String SCHEMA_NAME = "mcp_server_controller_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, McpServerControllerTest.class);
   }
 
   @Autowired private ProjectRepository projectRepository;

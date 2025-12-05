@@ -24,11 +24,9 @@ import com.specflux.user.domain.UserRepository;
  */
 class UserControllerTest extends AbstractControllerIntegrationTest {
 
-  private static final String SCHEMA_NAME = "user_controller_test";
-
   @DynamicPropertySource
   static void configureSchema(DynamicPropertyRegistry registry) {
-    AbstractControllerIntegrationTest.configureSchema(registry, SCHEMA_NAME);
+    configureSchemaForClass(registry, UserControllerTest.class);
   }
 
   @Autowired private UserRepository localUserRepository;
