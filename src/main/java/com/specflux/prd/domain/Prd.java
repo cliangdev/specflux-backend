@@ -1,20 +1,26 @@
-package com.specflux.epic.domain;
+package com.specflux.prd.domain;
 
 import java.time.Instant;
-import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.specflux.project.domain.Project;
 import com.specflux.shared.domain.AggregateRoot;
 import com.specflux.user.domain.User;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -22,12 +28,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Epic aggregate root representing a large feature or initiative. */
+/** PRD aggregate root representing a product requirements document. */
 @Entity
-@Table(name = "epics")
+@Table(name = "prds")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Epic extends AggregateRoot<Long> {
+public class Prd extends AggregateRoot<Long> {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,9 +45,6 @@ public class Epic extends AggregateRoot<Long> {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "project_id", nullable = false)
   private Project project;
-
-  @Column(name = "release_id")
-  private Long releaseId;
 
   @Column(name = "sequence_number", nullable = false)
   private Integer sequenceNumber;
@@ -57,25 +60,17 @@ public class Epic extends AggregateRoot<Long> {
   @Column(columnDefinition = "TEXT")
   private String description;
 
+  @Column(name = "folder_path", nullable = false, length = 500)
+  private String folderPath;
+
   @Setter
+  @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
-  private EpicStatus status = EpicStatus.PLANNING;
+  private PrdStatus status = PrdStatus.DRAFT;
 
-  @Setter
-  @Column(name = "target_date")
-  private LocalDate targetDate;
-
-  @Setter
-  @Column(name = "prd_id")
-  private Long prdId;
-
-  @Setter
-  @Column(name = "prd_file_path", length = 500)
-  private String prdFilePath;
-
-  @Setter
-  @Column(name = "epic_file_path", length = 500)
-  private String epicFilePath;
+  @OneToMany(mappedBy = "prd", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderBy("orderIndex ASC, id ASC")
+  private List<PrdDocument> documents = new ArrayList<>();
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "created_by_id", nullable = false)
@@ -87,20 +82,22 @@ public class Epic extends AggregateRoot<Long> {
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
 
-  public Epic(
+  public Prd(
       String publicId,
       Project project,
       int sequenceNumber,
       String displayKey,
       String title,
+      String folderPath,
       User createdBy) {
     this.publicId = publicId;
     this.project = project;
     this.sequenceNumber = sequenceNumber;
     this.displayKey = displayKey;
     this.title = title;
+    this.folderPath = folderPath;
     this.createdBy = createdBy;
-    this.status = EpicStatus.PLANNING;
+    this.status = PrdStatus.DRAFT;
     this.createdAt = Instant.now();
     this.updatedAt = Instant.now();
   }
@@ -110,7 +107,11 @@ public class Epic extends AggregateRoot<Long> {
     this.updatedAt = Instant.now();
   }
 
-  public void setReleaseId(Long releaseId) {
-    this.releaseId = releaseId;
+  public void addDocument(PrdDocument document) {
+    documents.add(document);
+  }
+
+  public void removeDocument(PrdDocument document) {
+    documents.remove(document);
   }
 }
