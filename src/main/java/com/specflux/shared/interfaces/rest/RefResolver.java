@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 
 import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicRepository;
+import com.specflux.prd.domain.Prd;
+import com.specflux.prd.domain.PrdRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
 import com.specflux.release.domain.Release;
@@ -37,6 +39,7 @@ public class RefResolver {
   private final TaskRepository taskRepository;
   private final ReleaseRepository releaseRepository;
   private final UserRepository userRepository;
+  private final PrdRepository prdRepository;
 
   /**
    * Resolves a project reference to a Project entity.
@@ -189,5 +192,45 @@ public class RefResolver {
       return null;
     }
     return resolveUser(ref);
+  }
+
+  /**
+   * Resolves a PRD reference to a Prd entity within a project.
+   *
+   * @param project The parent project
+   * @param ref PRD public ID (prd_xxx) or display key (PROJ-P1)
+   * @return The resolved Prd
+   * @throws EntityNotFoundException if PRD not found
+   */
+  public Prd resolvePrd(Project project, String ref) {
+    if (ref == null || ref.isBlank()) {
+      throw new IllegalArgumentException("PRD reference is required");
+    }
+
+    // Check if it's a public ID (starts with "prd_")
+    if (ref.startsWith("prd_")) {
+      return prdRepository
+          .findByPublicIdAndProjectId(ref, project.getId())
+          .orElseThrow(() -> new EntityNotFoundException("PRD not found: " + ref));
+    }
+
+    // Treat as display key (e.g., PROJ-P1)
+    return prdRepository
+        .findByProjectIdAndDisplayKey(project.getId(), ref)
+        .orElseThrow(() -> new EntityNotFoundException("PRD not found: " + ref));
+  }
+
+  /**
+   * Resolves an optional PRD reference within a project.
+   *
+   * @param project The parent project
+   * @param ref PRD reference (nullable)
+   * @return The resolved Prd, or null if ref is null/blank
+   */
+  public Prd resolvePrdOptional(Project project, String ref) {
+    if (ref == null || ref.isBlank()) {
+      return null;
+    }
+    return resolvePrd(project, ref);
   }
 }

@@ -61,6 +61,16 @@
       "description": "Epic publicId - populated by List/Create Epic"
     },
     {
+      "key": "prdRef",
+      "value": "",
+      "description": "PRD publicId - populated by List/Create PRD"
+    },
+    {
+      "key": "prdDocId",
+      "value": "",
+      "description": "PRD Document ID - populated by Add Document"
+    },
+    {
       "key": "taskRef",
       "value": "",
       "description": "Task publicId - populated by List/Create Task"
@@ -444,8 +454,263 @@
       ]
     },
     {
-      "name": "4. Epics",
-      "description": "Epic management - list, create, update, delete epics within a project.",
+      "name": "4. PRDs",
+      "description": "Product Requirements Documents - create, list, update, delete PRDs and their supporting documents.",
+      "item": [
+        {
+          "name": "List PRDs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        const firstPrd = response.data[0];",
+                  "        pm.environment.set('prdRef', firstPrd.id);",
+                  "        console.log('Saved prdRef:', firstPrd.id);",
+                  "    }",
+                  "    pm.test('Response has data array', function() {",
+                  "        pm.expect(response.data).to.be.an('array');",
+                  "    });",
+                  "    pm.test('PRDs have id', function() {",
+                  "        if (response.data.length > 0) {",
+                  "            pm.expect(response.data[0].id).to.match(/^prd_/);",
+                  "        }",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all PRDs for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (DRAFT, IN_REVIEW, APPROVED, ARCHIVED)\n\n**Auto-saves:** First PRD's `id` to `prdRef` variable."
+          }
+        },
+        {
+          "name": "Get PRD",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('PRD has id', function() {",
+                  "        pm.expect(response.id).to.match(/^prd_/);",
+                  "    });",
+                  "    pm.test('PRD has title', function() {",
+                  "        pm.expect(response.title).to.be.a('string');",
+                  "    });",
+                  "    pm.test('PRD has documents array', function() {",
+                  "        pm.expect(response.documents).to.be.an('array');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}"]
+            },
+            "description": "Get a PRD by its public ID or display key.\n\nUses `prdRef` from List PRDs response."
+          }
+        },
+        {
+          "name": "Create PRD",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.id) {",
+                  "        pm.environment.set('prdRef', response.id);",
+                  "        console.log('Saved prdRef:', response.id);",
+                  "    }",
+                  "    pm.test('PRD has id', function() {",
+                  "        pm.expect(response.id).to.match(/^prd_/);",
+                  "    });",
+                  "    pm.test('PRD has folderPath', function() {",
+                  "        pm.expect(response.folderPath).to.include('.specflux/prds/');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Authentication System\",\n  \"description\": \"User authentication with OAuth2 and social login\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds"]
+            },
+            "description": "Create a new PRD in a project.\n\n**Required:**\n- `title`: PRD title\n\n**Optional:**\n- `description`: PRD description\n- `folderPath`: Custom folder path (auto-generated if not provided)\n\n**Auto-saves:** `prdRef` variable.\n\n**Note:** PRD is created with DRAFT status. Use Update PRD to change status."
+          }
+        },
+        {
+          "name": "Update PRD",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Authentication System - Updated\",\n  \"description\": \"Updated description\",\n  \"status\": \"IN_REVIEW\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}"]
+            },
+            "description": "Update a PRD's properties.\n\n**Optional fields:**\n- `title`: PRD title\n- `description`: PRD description\n- `status`: DRAFT, IN_REVIEW, APPROVED, ARCHIVED\n\nAll fields are optional - only provided fields will be updated."
+          }
+        },
+        {
+          "name": "Delete PRD",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}"]
+            },
+            "description": "Delete a PRD and all its documents.\n\n**Warning:** This also removes the PRD reference from any linked epics."
+          }
+        },
+        {
+          "name": "Add Document to PRD",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.documents && response.documents.length > 0) {",
+                  "        const lastDoc = response.documents[response.documents.length - 1];",
+                  "        pm.environment.set('prdDocId', lastDoc.id);",
+                  "        console.log('Saved prdDocId:', lastDoc.id);",
+                  "    }",
+                  "    pm.test('PRD has documents', function() {",
+                  "        pm.expect(response.documents).to.be.an('array');",
+                  "        pm.expect(response.documents.length).to.be.greaterThan(0);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"prd.md\",\n  \"filePath\": \".specflux/prds/auth-system/prd.md\",\n  \"documentType\": \"PRD\",\n  \"isPrimary\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}", "documents"]
+            },
+            "description": "Add a document to a PRD.\n\n**Required:**\n- `fileName`: File name (e.g., \"prd.md\")\n- `filePath`: Full path relative to project root\n\n**Optional:**\n- `documentType`: PRD, WIREFRAME, MOCKUP, DESIGN, OTHER (default: OTHER)\n- `isPrimary`: Whether this is the main PRD document (default: false)\n- `orderIndex`: Display order (auto-incremented if not provided)\n\n**Auto-saves:** `prdDocId` variable."
+          }
+        },
+        {
+          "name": "Update Document",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"WIREFRAME\",\n  \"isPrimary\": false,\n  \"orderIndex\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}/documents/{{prdDocId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}", "documents", "{{prdDocId}}"]
+            },
+            "description": "Update a document's metadata.\n\n**Optional fields:**\n- `documentType`: PRD, WIREFRAME, MOCKUP, DESIGN, OTHER\n- `isPrimary`: Whether this is the main PRD document\n- `orderIndex`: Display order\n\nAll fields are optional - only provided fields will be updated."
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}/documents/{{prdDocId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}", "documents", "{{prdDocId}}"]
+            },
+            "description": "Delete a document from a PRD.\n\n**Note:** This only removes the document reference, not the actual file."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Epics",
+      "description": "Epic management - list, create, update, delete epics within a project. Epics can be linked to PRDs.",
       "item": [
         {
           "name": "List Epics",
@@ -619,7 +884,7 @@
       ]
     },
     {
-      "name": "5. Tasks",
+      "name": "6. Tasks",
       "description": "Task management - list, create, update, delete tasks within a project.",
       "item": [
         {
@@ -797,7 +1062,7 @@
       ]
     },
     {
-      "name": "6. Releases",
+      "name": "7. Releases",
       "description": "Release management - list, create, update, delete releases within a project.",
       "item": [
         {

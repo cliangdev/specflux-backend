@@ -23,6 +23,7 @@ import com.specflux.epic.domain.EpicDependency;
 import com.specflux.epic.domain.EpicDependencyRepository;
 import com.specflux.epic.domain.EpicRepository;
 import com.specflux.epic.interfaces.rest.EpicMapper;
+import com.specflux.prd.domain.Prd;
 import com.specflux.project.domain.Project;
 import com.specflux.release.domain.Release;
 import com.specflux.shared.application.CurrentUserService;
@@ -74,6 +75,16 @@ public class EpicApplicationService {
           epic.setDescription(request.getDescription());
           epic.setTargetDate(request.getTargetDate());
 
+          // Handle PRD reference
+          if (request.getPrdRef() != null && !request.getPrdRef().isBlank()) {
+            Prd prd = refResolver.resolvePrd(project, request.getPrdRef());
+            epic.setPrdId(prd.getId());
+          }
+          // Keep prdFilePath for backward compatibility
+          if (request.getPrdFilePath() != null) {
+            epic.setPrdFilePath(request.getPrdFilePath());
+          }
+
           Epic saved = epicRepository.save(epic);
           return epicMapper.toDto(saved);
         });
@@ -115,6 +126,14 @@ public class EpicApplicationService {
     }
     if (request.getTargetDate() != null) {
       epic.setTargetDate(request.getTargetDate());
+    }
+    if (request.getPrdRef() != null) {
+      if (request.getPrdRef().isBlank()) {
+        epic.setPrdId(null);
+      } else {
+        Prd prd = refResolver.resolvePrd(project, request.getPrdRef());
+        epic.setPrdId(prd.getId());
+      }
     }
     if (request.getPrdFilePath() != null) {
       epic.setPrdFilePath(request.getPrdFilePath());

@@ -14,6 +14,8 @@ import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicDependency;
 import com.specflux.epic.domain.EpicDependencyRepository;
 import com.specflux.epic.domain.EpicStatus;
+import com.specflux.prd.domain.Prd;
+import com.specflux.prd.domain.PrdRepository;
 import com.specflux.release.domain.Release;
 import com.specflux.release.domain.ReleaseRepository;
 import com.specflux.task.domain.Task;
@@ -30,6 +32,7 @@ public class EpicMapper {
   private final TaskRepository taskRepository;
   private final ReleaseRepository releaseRepository;
   private final EpicDependencyRepository epicDependencyRepository;
+  private final PrdRepository prdRepository;
 
   /**
    * Converts a domain Epic entity to an API Epic DTO with computed fields.
@@ -50,7 +53,10 @@ public class EpicMapper {
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
 
-    // New fields
+    // PRD reference
+    if (domain.getPrdId() != null) {
+      prdRepository.findById(domain.getPrdId()).map(Prd::getPublicId).ifPresent(dto::setPrdId);
+    }
     dto.setPrdFilePath(domain.getPrdFilePath());
     dto.setEpicFilePath(domain.getEpicFilePath());
 
@@ -103,6 +109,11 @@ public class EpicMapper {
     dto.setCreatedById(domain.getCreatedBy().getPublicId());
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
+
+    // PRD reference
+    if (domain.getPrdId() != null) {
+      prdRepository.findById(domain.getPrdId()).map(Prd::getPublicId).ifPresent(dto::setPrdId);
+    }
     dto.setPrdFilePath(domain.getPrdFilePath());
     dto.setEpicFilePath(domain.getEpicFilePath());
 
