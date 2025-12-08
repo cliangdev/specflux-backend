@@ -12,6 +12,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import com.specflux.api.generated.model.CreateAcceptanceCriteriaRequestDto;
+import com.specflux.api.generated.model.CreateEpicRequestAcceptanceCriteriaInnerDto;
 import com.specflux.api.generated.model.CreateEpicRequestDto;
 import com.specflux.api.generated.model.EpicStatusDto;
 import com.specflux.api.generated.model.UpdateAcceptanceCriteriaRequestDto;
@@ -20,6 +21,8 @@ import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicRepository;
 import com.specflux.epic.domain.EpicStatus;
+import com.specflux.prd.domain.Prd;
+import com.specflux.prd.domain.PrdRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
 
@@ -37,6 +40,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
   @Autowired private ProjectRepository projectRepository;
   @Autowired private EpicRepository epicRepository;
+  @Autowired private PrdRepository prdRepository;
 
   private Project testProject;
 
@@ -52,6 +56,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("User Authentication Feature");
     request.setDescription("Implement OAuth2 authentication");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Users can log in with OAuth2"));
 
     mockMvc
         .perform(
@@ -75,6 +81,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void createEpic_usingProjectKey_shouldReturnCreatedEpic() throws Exception {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Dashboard Feature");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Dashboard displays metrics"));
 
     mockMvc
         .perform(
@@ -90,6 +98,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void createEpic_projectNotFound_shouldReturn404() throws Exception {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Test Epic");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Test criteria"));
 
     mockMvc
         .perform(
@@ -269,6 +279,132 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   }
 
   @Test
+  void listEpics_withPrdRefFilter_shouldReturnFilteredList() throws Exception {
+    // Create PRDs
+    Prd prd1 =
+        prdRepository.save(
+            new Prd(
+                "prd_test1",
+                testProject,
+                1,
+                "EPIC-P1",
+                "Auth PRD",
+                ".specflux/prds/auth",
+                testUser));
+    Prd prd2 =
+        prdRepository.save(
+            new Prd(
+                "prd_test2",
+                testProject,
+                2,
+                "EPIC-P2",
+                "Dashboard PRD",
+                ".specflux/prds/dashboard",
+                testUser));
+
+    // Create epics linked to PRDs
+    Epic epic1 = new Epic("epic_prd1", testProject, 1, "EPIC-E1", "Auth Epic", testUser);
+    epic1.setPrdId(prd1.getId());
+    epicRepository.save(epic1);
+
+    Epic epic2 = new Epic("epic_prd2", testProject, 2, "EPIC-E2", "Dashboard Epic", testUser);
+    epic2.setPrdId(prd2.getId());
+    epicRepository.save(epic2);
+
+    Epic epic3 = new Epic("epic_noprd", testProject, 3, "EPIC-E3", "No PRD Epic", testUser);
+    epicRepository.save(epic3);
+
+    // Filter by prdRef (public ID)
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", prd1.getPublicId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("Auth Epic"));
+  }
+
+  @Test
+  void listEpics_withPrdRefFilter_byDisplayKey_shouldReturnFilteredList() throws Exception {
+    // Create PRD
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_dispkey",
+                testProject,
+                1,
+                "EPIC-P1",
+                "Feature PRD",
+                ".specflux/prds/feature",
+                testUser));
+
+    // Create epic linked to PRD
+    Epic epic = new Epic("epic_dispkey", testProject, 1, "EPIC-E1", "Feature Epic", testUser);
+    epic.setPrdId(prd.getId());
+    epicRepository.save(epic);
+
+    // Filter by prdRef using display key
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", "EPIC-P1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("Feature Epic"));
+  }
+
+  @Test
+  void listEpics_withPrdRefAndStatusFilter_shouldReturnFilteredList() throws Exception {
+    // Create PRD
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_combined",
+                testProject,
+                1,
+                "EPIC-P1",
+                "Combined PRD",
+                ".specflux/prds/combined",
+                testUser));
+
+    // Create epics with different statuses linked to same PRD
+    Epic epic1 = new Epic("epic_comb1", testProject, 1, "EPIC-E1", "Planning Epic", testUser);
+    epic1.setPrdId(prd.getId());
+    epic1.setStatus(EpicStatus.PLANNING);
+    epicRepository.save(epic1);
+
+    Epic epic2 = new Epic("epic_comb2", testProject, 2, "EPIC-E2", "In Progress Epic", testUser);
+    epic2.setPrdId(prd.getId());
+    epic2.setStatus(EpicStatus.IN_PROGRESS);
+    epicRepository.save(epic2);
+
+    // Filter by both prdRef and status
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", prd.getPublicId())
+                .param("status", "IN_PROGRESS"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("In Progress Epic"))
+        .andExpect(jsonPath("$.data[0].status").value("IN_PROGRESS"));
+  }
+
+  @Test
+  void listEpics_withInvalidPrdRef_shouldReturn404() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", "nonexistent_prd"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
   void listEpics_withSort_shouldReturnSortedList() throws Exception {
     epicRepository.save(new Epic("epic_z", testProject, 1, "EPIC-E1", "Zeta Epic", testUser));
     epicRepository.save(new Epic("epic_a", testProject, 2, "EPIC-E2", "Alpha Epic", testUser));
@@ -301,6 +437,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     // Create first epic
     CreateEpicRequestDto request1 = new CreateEpicRequestDto();
     request1.setTitle("First Epic");
+    request1.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("First epic criteria"));
     mockMvc
         .perform(
             post("/api/projects/{projectRef}/epics", testProject.getPublicId())
@@ -313,6 +451,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     // Create second epic
     CreateEpicRequestDto request2 = new CreateEpicRequestDto();
     request2.setTitle("Second Epic");
+    request2.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Second epic criteria"));
     mockMvc
         .perform(
             post("/api/projects/{projectRef}/epics", testProject.getPublicId())
@@ -334,6 +474,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void createEpic_withoutAuth_shouldReturn403() throws Exception {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Test Epic");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Test criteria"));
 
     mockMvc
         .perform(
@@ -341,6 +483,35 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void createEpic_withoutAcceptanceCriteria_shouldReturn400() throws Exception {
+    CreateEpicRequestDto request = new CreateEpicRequestDto();
+    request.setTitle("Test Epic Without AC");
+    // No acceptance criteria added
+
+    mockMvc
+        .perform(
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createEpic_withEmptyAcceptanceCriteria_shouldReturn400() throws Exception {
+    // Test with explicitly empty array
+    String jsonRequest = "{\"title\": \"Test Epic\", \"acceptanceCriteria\": []}";
+
+    mockMvc
+        .perform(
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isBadRequest());
   }
 
   // ==================== EPIC ACCEPTANCE CRITERIA TESTS ====================
