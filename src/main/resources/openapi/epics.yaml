@@ -23,6 +23,11 @@ paths:
           description: Filter by status
           schema:
             $ref: './components/schemas.yaml#/components/schemas/EpicStatus'
+        - name: prdRef
+          in: query
+          description: Filter by PRD (public ID or display key)
+          schema:
+            type: string
       responses:
         '200':
           description: List of epics

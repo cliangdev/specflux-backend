@@ -172,6 +172,7 @@ public class EpicApplicationService {
    * @param sort the sort field
    * @param order the sort order (asc/desc)
    * @param status optional status filter
+   * @param prdRef optional PRD reference filter (public ID or display key)
    * @return the paginated epic list
    */
   public EpicListResponseDto listEpics(
@@ -180,10 +181,15 @@ public class EpicApplicationService {
       int limit,
       String sort,
       String order,
-      EpicStatusDto status) {
+      EpicStatusDto status,
+      String prdRef) {
 
     log.debug(
-        "[listEpics] Starting - projectRef={}, status={}, limit={}", projectRef, status, limit);
+        "[listEpics] Starting - projectRef={}, status={}, prdRef={}, limit={}",
+        projectRef,
+        status,
+        prdRef,
+        limit);
 
     Project project = refResolver.resolveProject(projectRef);
 
@@ -191,13 +197,29 @@ public class EpicApplicationService {
     CursorData cursorData = decodeCursor(cursor);
     int offset = cursorData != null ? cursorData.offset() : 0;
 
-    // Get epics for project with optional status filter
+    // Resolve PRD if prdRef is provided
+    Long prdId = null;
+    if (prdRef != null && !prdRef.isBlank()) {
+      Prd prd = refResolver.resolvePrd(project, prdRef);
+      prdId = prd.getId();
+      log.debug("[listEpics] Resolved prdRef {} to prdId {}", prdRef, prdId);
+    }
+
+    // Get epics for project with optional filters
     List<Epic> allEpics;
-    if (status != null) {
+    if (status != null && prdId != null) {
+      allEpics =
+          epicRepository.findByProjectIdAndStatusAndPrdId(
+              project.getId(), epicMapper.toDomainStatus(status), prdId);
+      log.debug("[listEpics] Querying with status and prdId filter");
+    } else if (status != null) {
       allEpics =
           epicRepository.findByProjectIdAndStatus(
               project.getId(), epicMapper.toDomainStatus(status));
       log.debug("[listEpics] Querying with status filter: {}", status);
+    } else if (prdId != null) {
+      allEpics = epicRepository.findByProjectIdAndPrdId(project.getId(), prdId);
+      log.debug("[listEpics] Querying with prdId filter: {}", prdId);
     } else {
       allEpics = epicRepository.findByProjectId(project.getId());
     }
