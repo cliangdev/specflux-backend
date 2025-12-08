@@ -11,6 +11,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.specflux.acceptancecriteria.domain.AcceptanceCriteria;
+import com.specflux.acceptancecriteria.domain.AcceptanceCriteriaRepository;
+import com.specflux.api.generated.model.CreateEpicRequestAcceptanceCriteriaInnerDto;
 import com.specflux.api.generated.model.CreateEpicRequestDto;
 import com.specflux.api.generated.model.CursorPaginationDto;
 import com.specflux.api.generated.model.EpicDto;
@@ -45,6 +48,7 @@ public class EpicApplicationService {
 
   private final EpicRepository epicRepository;
   private final EpicDependencyRepository epicDependencyRepository;
+  private final AcceptanceCriteriaRepository acceptanceCriteriaRepository;
   private final TaskRepository taskRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
@@ -60,6 +64,11 @@ public class EpicApplicationService {
    * @return the created epic DTO
    */
   public EpicDto createEpic(String projectRef, CreateEpicRequestDto request) {
+    // Validate acceptance criteria is not empty (OpenAPI minItems validation may not be enforced)
+    if (request.getAcceptanceCriteria() == null || request.getAcceptanceCriteria().isEmpty()) {
+      throw new IllegalArgumentException("At least one acceptance criteria is required");
+    }
+
     return transactionTemplate.execute(
         status -> {
           Project project = refResolver.resolveProject(projectRef);
@@ -86,6 +95,16 @@ public class EpicApplicationService {
           }
 
           Epic saved = epicRepository.save(epic);
+
+          // Create acceptance criteria for the epic
+          int orderIndex = 0;
+          for (CreateEpicRequestAcceptanceCriteriaInnerDto acRequest :
+              request.getAcceptanceCriteria()) {
+            AcceptanceCriteria ac =
+                new AcceptanceCriteria(saved, acRequest.getCriteria(), orderIndex++);
+            acceptanceCriteriaRepository.save(ac);
+          }
+
           return epicMapper.toDto(saved);
         });
   }

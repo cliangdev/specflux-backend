@@ -12,6 +12,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import com.specflux.api.generated.model.CreateAcceptanceCriteriaRequestDto;
+import com.specflux.api.generated.model.CreateEpicRequestAcceptanceCriteriaInnerDto;
 import com.specflux.api.generated.model.CreateEpicRequestDto;
 import com.specflux.api.generated.model.EpicStatusDto;
 import com.specflux.api.generated.model.UpdateAcceptanceCriteriaRequestDto;
@@ -55,6 +56,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("User Authentication Feature");
     request.setDescription("Implement OAuth2 authentication");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Users can log in with OAuth2"));
 
     mockMvc
         .perform(
@@ -78,6 +81,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void createEpic_usingProjectKey_shouldReturnCreatedEpic() throws Exception {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Dashboard Feature");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Dashboard displays metrics"));
 
     mockMvc
         .perform(
@@ -93,6 +98,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void createEpic_projectNotFound_shouldReturn404() throws Exception {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Test Epic");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Test criteria"));
 
     mockMvc
         .perform(
@@ -430,6 +437,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     // Create first epic
     CreateEpicRequestDto request1 = new CreateEpicRequestDto();
     request1.setTitle("First Epic");
+    request1.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("First epic criteria"));
     mockMvc
         .perform(
             post("/api/projects/{projectRef}/epics", testProject.getPublicId())
@@ -442,6 +451,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     // Create second epic
     CreateEpicRequestDto request2 = new CreateEpicRequestDto();
     request2.setTitle("Second Epic");
+    request2.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Second epic criteria"));
     mockMvc
         .perform(
             post("/api/projects/{projectRef}/epics", testProject.getPublicId())
@@ -463,6 +474,8 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void createEpic_withoutAuth_shouldReturn403() throws Exception {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("Test Epic");
+    request.addAcceptanceCriteriaItem(
+        new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Test criteria"));
 
     mockMvc
         .perform(
@@ -470,6 +483,35 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void createEpic_withoutAcceptanceCriteria_shouldReturn400() throws Exception {
+    CreateEpicRequestDto request = new CreateEpicRequestDto();
+    request.setTitle("Test Epic Without AC");
+    // No acceptance criteria added
+
+    mockMvc
+        .perform(
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createEpic_withEmptyAcceptanceCriteria_shouldReturn400() throws Exception {
+    // Test with explicitly empty array
+    String jsonRequest = "{\"title\": \"Test Epic\", \"acceptanceCriteria\": []}";
+
+    mockMvc
+        .perform(
+            post("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isBadRequest());
   }
 
   // ==================== EPIC ACCEPTANCE CRITERIA TESTS ====================
