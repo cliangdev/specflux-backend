@@ -20,6 +20,8 @@ import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicRepository;
 import com.specflux.epic.domain.EpicStatus;
+import com.specflux.prd.domain.Prd;
+import com.specflux.prd.domain.PrdRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
 
@@ -37,6 +39,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
   @Autowired private ProjectRepository projectRepository;
   @Autowired private EpicRepository epicRepository;
+  @Autowired private PrdRepository prdRepository;
 
   private Project testProject;
 
@@ -266,6 +269,132 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.length()").value(1))
         .andExpect(jsonPath("$.data[0].status").value("IN_PROGRESS"));
+  }
+
+  @Test
+  void listEpics_withPrdRefFilter_shouldReturnFilteredList() throws Exception {
+    // Create PRDs
+    Prd prd1 =
+        prdRepository.save(
+            new Prd(
+                "prd_test1",
+                testProject,
+                1,
+                "EPIC-P1",
+                "Auth PRD",
+                ".specflux/prds/auth",
+                testUser));
+    Prd prd2 =
+        prdRepository.save(
+            new Prd(
+                "prd_test2",
+                testProject,
+                2,
+                "EPIC-P2",
+                "Dashboard PRD",
+                ".specflux/prds/dashboard",
+                testUser));
+
+    // Create epics linked to PRDs
+    Epic epic1 = new Epic("epic_prd1", testProject, 1, "EPIC-E1", "Auth Epic", testUser);
+    epic1.setPrdId(prd1.getId());
+    epicRepository.save(epic1);
+
+    Epic epic2 = new Epic("epic_prd2", testProject, 2, "EPIC-E2", "Dashboard Epic", testUser);
+    epic2.setPrdId(prd2.getId());
+    epicRepository.save(epic2);
+
+    Epic epic3 = new Epic("epic_noprd", testProject, 3, "EPIC-E3", "No PRD Epic", testUser);
+    epicRepository.save(epic3);
+
+    // Filter by prdRef (public ID)
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", prd1.getPublicId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("Auth Epic"));
+  }
+
+  @Test
+  void listEpics_withPrdRefFilter_byDisplayKey_shouldReturnFilteredList() throws Exception {
+    // Create PRD
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_dispkey",
+                testProject,
+                1,
+                "EPIC-P1",
+                "Feature PRD",
+                ".specflux/prds/feature",
+                testUser));
+
+    // Create epic linked to PRD
+    Epic epic = new Epic("epic_dispkey", testProject, 1, "EPIC-E1", "Feature Epic", testUser);
+    epic.setPrdId(prd.getId());
+    epicRepository.save(epic);
+
+    // Filter by prdRef using display key
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", "EPIC-P1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("Feature Epic"));
+  }
+
+  @Test
+  void listEpics_withPrdRefAndStatusFilter_shouldReturnFilteredList() throws Exception {
+    // Create PRD
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_combined",
+                testProject,
+                1,
+                "EPIC-P1",
+                "Combined PRD",
+                ".specflux/prds/combined",
+                testUser));
+
+    // Create epics with different statuses linked to same PRD
+    Epic epic1 = new Epic("epic_comb1", testProject, 1, "EPIC-E1", "Planning Epic", testUser);
+    epic1.setPrdId(prd.getId());
+    epic1.setStatus(EpicStatus.PLANNING);
+    epicRepository.save(epic1);
+
+    Epic epic2 = new Epic("epic_comb2", testProject, 2, "EPIC-E2", "In Progress Epic", testUser);
+    epic2.setPrdId(prd.getId());
+    epic2.setStatus(EpicStatus.IN_PROGRESS);
+    epicRepository.save(epic2);
+
+    // Filter by both prdRef and status
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", prd.getPublicId())
+                .param("status", "IN_PROGRESS"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("In Progress Epic"))
+        .andExpect(jsonPath("$.data[0].status").value("IN_PROGRESS"));
+  }
+
+  @Test
+  void listEpics_withInvalidPrdRef_shouldReturn404() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdRef", "nonexistent_prd"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }
 
   @Test
