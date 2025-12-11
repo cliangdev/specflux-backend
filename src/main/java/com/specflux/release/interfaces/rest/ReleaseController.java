@@ -9,6 +9,7 @@ import com.specflux.api.generated.model.CreateReleaseRequestDto;
 import com.specflux.api.generated.model.ReleaseDto;
 import com.specflux.api.generated.model.ReleaseListResponseDto;
 import com.specflux.api.generated.model.ReleaseStatusDto;
+import com.specflux.api.generated.model.ReleaseWithEpicsDto;
 import com.specflux.api.generated.model.UpdateReleaseRequestDto;
 import com.specflux.release.application.ReleaseApplicationService;
 
@@ -29,8 +30,10 @@ public class ReleaseController implements ReleasesApi {
   }
 
   @Override
-  public ResponseEntity<ReleaseDto> getRelease(String projectRef, String releaseRef) {
-    ReleaseDto release = releaseApplicationService.getRelease(projectRef, releaseRef);
+  public ResponseEntity<ReleaseWithEpicsDto> getRelease(
+      String projectRef, String releaseRef, String include) {
+    ReleaseWithEpicsDto release =
+        releaseApplicationService.getRelease(projectRef, releaseRef, include);
     return ResponseEntity.ok(release);
   }
 

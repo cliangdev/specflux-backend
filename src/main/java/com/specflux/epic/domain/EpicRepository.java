@@ -23,4 +23,6 @@ public interface EpicRepository extends JpaRepository<Epic, Long> {
   List<Epic> findByProjectIdAndStatusAndPrdId(Long projectId, EpicStatus status, Long prdId);
 
   List<Epic> findByReleaseId(Long releaseId);
+
+  List<Epic> findByProjectIdAndReleaseId(Long projectId, Long releaseId);
 }

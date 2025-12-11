@@ -77,6 +77,10 @@ public class Epic extends AggregateRoot<Long> {
   @Column(name = "epic_file_path", length = 500)
   private String epicFilePath;
 
+  @Setter
+  @Column(columnDefinition = "TEXT")
+  private String notes;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "created_by_id", nullable = false)
   private User createdBy;

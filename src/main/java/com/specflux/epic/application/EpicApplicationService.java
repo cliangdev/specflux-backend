@@ -165,6 +165,9 @@ public class EpicApplicationService {
         epic.setReleaseId(release.getId());
       }
     }
+    if (request.getNotes() != null) {
+      epic.setNotes(request.getNotes());
+    }
 
     Epic saved = transactionTemplate.execute(status -> epicRepository.save(epic));
     return epicMapper.toDto(saved);
@@ -192,6 +195,7 @@ public class EpicApplicationService {
    * @param order the sort order (asc/desc)
    * @param status optional status filter
    * @param prdRef optional PRD reference filter (public ID or display key)
+   * @param releaseRef optional Release reference filter (public ID or display key)
    * @return the paginated epic list
    */
   public EpicListResponseDto listEpics(
@@ -201,13 +205,15 @@ public class EpicApplicationService {
       String sort,
       String order,
       EpicStatusDto status,
-      String prdRef) {
+      String prdRef,
+      String releaseRef) {
 
     log.debug(
-        "[listEpics] Starting - projectRef={}, status={}, prdRef={}, limit={}",
+        "[listEpics] Starting - projectRef={}, status={}, prdRef={}, releaseRef={}, limit={}",
         projectRef,
         status,
         prdRef,
+        releaseRef,
         limit);
 
     Project project = refResolver.resolveProject(projectRef);
@@ -224,24 +230,16 @@ public class EpicApplicationService {
       log.debug("[listEpics] Resolved prdRef {} to prdId {}", prdRef, prdId);
     }
 
-    // Get epics for project with optional filters
-    List<Epic> allEpics;
-    if (status != null && prdId != null) {
-      allEpics =
-          epicRepository.findByProjectIdAndStatusAndPrdId(
-              project.getId(), epicMapper.toDomainStatus(status), prdId);
-      log.debug("[listEpics] Querying with status and prdId filter");
-    } else if (status != null) {
-      allEpics =
-          epicRepository.findByProjectIdAndStatus(
-              project.getId(), epicMapper.toDomainStatus(status));
-      log.debug("[listEpics] Querying with status filter: {}", status);
-    } else if (prdId != null) {
-      allEpics = epicRepository.findByProjectIdAndPrdId(project.getId(), prdId);
-      log.debug("[listEpics] Querying with prdId filter: {}", prdId);
-    } else {
-      allEpics = epicRepository.findByProjectId(project.getId());
+    // Resolve Release if releaseRef is provided
+    Long releaseId = null;
+    if (releaseRef != null && !releaseRef.isBlank()) {
+      Release release = refResolver.resolveRelease(project, releaseRef);
+      releaseId = release.getId();
+      log.debug("[listEpics] Resolved releaseRef {} to releaseId {}", releaseRef, releaseId);
     }
+
+    // Get epics for project with optional filters
+    List<Epic> allEpics = fetchEpicsWithFilters(project.getId(), status, prdId, releaseId);
     log.debug("[listEpics] Found {} epics for project {}", allEpics.size(), project.getId());
 
     long total = allEpics.size();
@@ -441,6 +439,46 @@ public class EpicApplicationService {
       case "updated_at" -> "updatedAt";
       default -> "createdAt";
     };
+  }
+
+  /**
+   * Fetches epics with multiple optional filters.
+   *
+   * @param projectId the project ID
+   * @param status optional status filter
+   * @param prdId optional PRD ID filter
+   * @param releaseId optional Release ID filter
+   * @return list of matching epics
+   */
+  private List<Epic> fetchEpicsWithFilters(
+      Long projectId, EpicStatusDto status, Long prdId, Long releaseId) {
+
+    // Use repository method that supports all filters
+    if (releaseId != null) {
+      // Filter by release (may also filter by status/prdId)
+      List<Epic> epics = epicRepository.findByProjectIdAndReleaseId(projectId, releaseId);
+      // Apply additional filters in memory if needed
+      if (status != null) {
+        epics =
+            epics.stream().filter(e -> e.getStatus() == epicMapper.toDomainStatus(status)).toList();
+      }
+      if (prdId != null) {
+        epics = epics.stream().filter(e -> prdId.equals(e.getPrdId())).toList();
+      }
+      return epics;
+    }
+
+    // Original logic without releaseRef
+    if (status != null && prdId != null) {
+      return epicRepository.findByProjectIdAndStatusAndPrdId(
+          projectId, epicMapper.toDomainStatus(status), prdId);
+    } else if (status != null) {
+      return epicRepository.findByProjectIdAndStatus(projectId, epicMapper.toDomainStatus(status));
+    } else if (prdId != null) {
+      return epicRepository.findByProjectIdAndPrdId(projectId, prdId);
+    } else {
+      return epicRepository.findByProjectId(projectId);
+    }
   }
 
   private int getNextSequenceNumber(Project project) {

@@ -59,6 +59,7 @@ public class EpicMapper {
     }
     dto.setPrdFilePath(domain.getPrdFilePath());
     dto.setEpicFilePath(domain.getEpicFilePath());
+    dto.setNotes(domain.getNotes());
 
     // Release ID (public ID of the release)
     if (domain.getReleaseId() != null) {
@@ -116,6 +117,7 @@ public class EpicMapper {
     }
     dto.setPrdFilePath(domain.getPrdFilePath());
     dto.setEpicFilePath(domain.getEpicFilePath());
+    dto.setNotes(domain.getNotes());
 
     // Set release ID if present
     if (domain.getReleaseId() != null) {
