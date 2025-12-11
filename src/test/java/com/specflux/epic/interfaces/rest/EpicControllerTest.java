@@ -25,6 +25,8 @@ import com.specflux.prd.domain.Prd;
 import com.specflux.prd.domain.PrdRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
+import com.specflux.release.domain.Release;
+import com.specflux.release.domain.ReleaseRepository;
 
 /**
  * Integration tests for EpicController.
@@ -41,6 +43,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   @Autowired private ProjectRepository projectRepository;
   @Autowired private EpicRepository epicRepository;
   @Autowired private PrdRepository prdRepository;
+  @Autowired private ReleaseRepository releaseRepository;
 
   private Project testProject;
 
@@ -185,6 +188,46 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(jsonPath("$.title").value("Updated Title"))
         .andExpect(jsonPath("$.description").value("New description"))
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+  }
+
+  @Test
+  void updateEpic_withNotes_shouldUpdateNotes() throws Exception {
+    Epic epic =
+        epicRepository.save(
+            new Epic("epic_notes", testProject, 1, "EPIC-E1", "Epic With Notes", testUser));
+
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
+    request.setNotes("Session handoff: Completed task 1, working on task 2");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_notes")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.notes").value("Session handoff: Completed task 1, working on task 2"));
+  }
+
+  @Test
+  void getEpic_shouldReturnNotesField() throws Exception {
+    Epic epic = new Epic("epic_getnotes", testProject, 1, "EPIC-E1", "Epic With Notes", testUser);
+    epic.setNotes("Some session notes");
+    epicRepository.save(epic);
+
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_getnotes")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.notes").value("Some session notes"));
   }
 
   @Test
@@ -400,6 +443,100 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
             get("/api/projects/{projectRef}/epics", testProject.getPublicId())
                 .with(user("user"))
                 .param("prdRef", "nonexistent_prd"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void listEpics_withReleaseRefFilter_shouldReturnFilteredList() throws Exception {
+    // Create releases
+    Release release1 =
+        releaseRepository.save(new Release("rel_test1", testProject, 1, "EPIC-R1", "v1.0"));
+    Release release2 =
+        releaseRepository.save(new Release("rel_test2", testProject, 2, "EPIC-R2", "v2.0"));
+
+    // Create epics linked to releases
+    Epic epic1 = new Epic("epic_rel1", testProject, 1, "EPIC-E1", "Release 1 Epic", testUser);
+    epic1.setReleaseId(release1.getId());
+    epicRepository.save(epic1);
+
+    Epic epic2 = new Epic("epic_rel2", testProject, 2, "EPIC-E2", "Release 2 Epic", testUser);
+    epic2.setReleaseId(release2.getId());
+    epicRepository.save(epic2);
+
+    Epic epic3 = new Epic("epic_norel", testProject, 3, "EPIC-E3", "No Release Epic", testUser);
+    epicRepository.save(epic3);
+
+    // Filter by releaseRef (public ID)
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("releaseRef", release1.getPublicId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("Release 1 Epic"));
+  }
+
+  @Test
+  void listEpics_withReleaseRefFilter_byDisplayKey_shouldReturnFilteredList() throws Exception {
+    // Create release
+    Release release =
+        releaseRepository.save(new Release("rel_dispkey", testProject, 1, "EPIC-R1", "v1.0-MVP"));
+
+    // Create epic linked to release
+    Epic epic = new Epic("epic_reldispkey", testProject, 1, "EPIC-E1", "MVP Epic", testUser);
+    epic.setReleaseId(release.getId());
+    epicRepository.save(epic);
+
+    // Filter by releaseRef using display key
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("releaseRef", "EPIC-R1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("MVP Epic"));
+  }
+
+  @Test
+  void listEpics_withReleaseRefAndStatusFilter_shouldReturnFilteredList() throws Exception {
+    // Create release
+    Release release =
+        releaseRepository.save(new Release("rel_combined", testProject, 1, "EPIC-R1", "v1.0"));
+
+    // Create epics with different statuses linked to same release
+    Epic epic1 = new Epic("epic_relcomb1", testProject, 1, "EPIC-E1", "Planning Epic", testUser);
+    epic1.setReleaseId(release.getId());
+    epic1.setStatus(EpicStatus.PLANNING);
+    epicRepository.save(epic1);
+
+    Epic epic2 = new Epic("epic_relcomb2", testProject, 2, "EPIC-E2", "In Progress Epic", testUser);
+    epic2.setReleaseId(release.getId());
+    epic2.setStatus(EpicStatus.IN_PROGRESS);
+    epicRepository.save(epic2);
+
+    // Filter by both releaseRef and status
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("releaseRef", release.getPublicId())
+                .param("status", "IN_PROGRESS"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].title").value("In Progress Epic"))
+        .andExpect(jsonPath("$.data[0].status").value("IN_PROGRESS"));
+  }
+
+  @Test
+  void listEpics_withInvalidReleaseRef_shouldReturn404() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/epics", testProject.getPublicId())
+                .with(user("user"))
+                .param("releaseRef", "nonexistent_release"))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }

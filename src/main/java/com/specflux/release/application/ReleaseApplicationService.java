@@ -1,10 +1,13 @@
 package com.specflux.release.application;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -16,7 +19,10 @@ import com.specflux.api.generated.model.CursorPaginationDto;
 import com.specflux.api.generated.model.ReleaseDto;
 import com.specflux.api.generated.model.ReleaseListResponseDto;
 import com.specflux.api.generated.model.ReleaseStatusDto;
+import com.specflux.api.generated.model.ReleaseWithEpicsDto;
 import com.specflux.api.generated.model.UpdateReleaseRequestDto;
+import com.specflux.epic.domain.Epic;
+import com.specflux.epic.domain.EpicRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.release.domain.Release;
 import com.specflux.release.domain.ReleaseRepository;
@@ -31,8 +37,10 @@ import lombok.RequiredArgsConstructor;
 public class ReleaseApplicationService {
 
   private final ReleaseRepository releaseRepository;
+  private final EpicRepository epicRepository;
   private final RefResolver refResolver;
   private final TransactionTemplate transactionTemplate;
+  private final ReleaseMapper releaseMapper;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   /**
@@ -57,21 +65,35 @@ public class ReleaseApplicationService {
           release.setTargetDate(request.getTargetDate());
 
           Release saved = releaseRepository.save(release);
-          return ReleaseMapper.toDto(saved);
+          return releaseMapper.toDto(saved);
         });
   }
 
   /**
-   * Gets a release by reference within a project.
+   * Gets a release by reference within a project with optional nested data.
    *
    * @param projectRef the project reference
    * @param releaseRef the release reference (publicId or displayKey)
-   * @return the release DTO
+   * @param include comma-separated list of nested resources to include (epics, tasks)
+   * @return the release DTO with optional nested epics/tasks
    */
-  public ReleaseDto getRelease(String projectRef, String releaseRef) {
+  public ReleaseWithEpicsDto getRelease(String projectRef, String releaseRef, String include) {
     Project project = refResolver.resolveProject(projectRef);
     Release release = refResolver.resolveRelease(project, releaseRef);
-    return ReleaseMapper.toDto(release);
+
+    // Parse include parameter
+    Set<String> includeSet =
+        include != null && !include.isBlank()
+            ? Arrays.stream(include.split(",")).map(String::trim).collect(Collectors.toSet())
+            : Set.of();
+
+    boolean includeEpics = includeSet.contains("epics");
+    boolean includeTasks = includeSet.contains("tasks");
+
+    // Get epics if requested
+    List<Epic> epics = includeEpics ? epicRepository.findByReleaseId(release.getId()) : List.of();
+
+    return releaseMapper.toDtoWithEpics(release, epics, includeTasks);
   }
 
   /**
@@ -101,7 +123,7 @@ public class ReleaseApplicationService {
     }
 
     Release saved = transactionTemplate.execute(status -> releaseRepository.save(release));
-    return ReleaseMapper.toDto(saved);
+    return releaseMapper.toDto(saved);
   }
 
   /**
@@ -171,7 +193,7 @@ public class ReleaseApplicationService {
 
     // Build response
     ReleaseListResponseDto response = new ReleaseListResponseDto();
-    response.setData(resultReleases.stream().map(ReleaseMapper::toDto).toList());
+    response.setData(resultReleases.stream().map(releaseMapper::toDto).toList());
 
     CursorPaginationDto pagination = new CursorPaginationDto();
     pagination.setTotal(total);

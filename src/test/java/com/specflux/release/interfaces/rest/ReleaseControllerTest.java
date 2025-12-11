@@ -15,11 +15,15 @@ import com.specflux.api.generated.model.CreateReleaseRequestDto;
 import com.specflux.api.generated.model.ReleaseStatusDto;
 import com.specflux.api.generated.model.UpdateReleaseRequestDto;
 import com.specflux.common.AbstractControllerIntegrationTest;
+import com.specflux.epic.domain.Epic;
+import com.specflux.epic.domain.EpicRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
 import com.specflux.release.domain.Release;
 import com.specflux.release.domain.ReleaseRepository;
 import com.specflux.release.domain.ReleaseStatus;
+import com.specflux.task.domain.Task;
+import com.specflux.task.domain.TaskRepository;
 
 /**
  * Integration tests for ReleaseController.
@@ -35,6 +39,8 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
   @Autowired private ProjectRepository projectRepository;
   @Autowired private ReleaseRepository releaseRepository;
+  @Autowired private EpicRepository epicRepository;
+  @Autowired private TaskRepository taskRepository;
 
   private Project testProject;
 
@@ -336,5 +342,99 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getRelease_withoutInclude_shouldReturnReleaseOnly() throws Exception {
+    Release release =
+        releaseRepository.save(
+            new Release("rel_noinclude", testProject, 1, "REL-R1", "Release Without Include"));
+
+    // Create an epic assigned to this release
+    Epic epic = new Epic("epic_noinclude", testProject, 1, "REL-E1", "Epic 1", testUser);
+    epic.setReleaseId(release.getId());
+    epicRepository.save(epic);
+
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
+                    testProject.getPublicId(),
+                    "rel_noinclude")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("rel_noinclude"))
+        .andExpect(jsonPath("$.name").value("Release Without Include"))
+        .andExpect(jsonPath("$.epics").isEmpty());
+  }
+
+  @Test
+  void getRelease_withIncludeEpics_shouldReturnNestedEpics() throws Exception {
+    Release release =
+        releaseRepository.save(
+            new Release("rel_incepics", testProject, 1, "REL-R1", "Release With Epics"));
+
+    // Create epics assigned to this release
+    Epic epic1 = new Epic("epic_inc1", testProject, 1, "REL-E1", "Epic 1", testUser);
+    epic1.setReleaseId(release.getId());
+    epicRepository.save(epic1);
+
+    Epic epic2 = new Epic("epic_inc2", testProject, 2, "REL-E2", "Epic 2", testUser);
+    epic2.setReleaseId(release.getId());
+    epicRepository.save(epic2);
+
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
+                    testProject.getPublicId(),
+                    "rel_incepics")
+                .with(user("user"))
+                .param("include", "epics"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("rel_incepics"))
+        .andExpect(jsonPath("$.name").value("Release With Epics"))
+        .andExpect(jsonPath("$.epics").isArray())
+        .andExpect(jsonPath("$.epics.length()").value(2))
+        .andExpect(jsonPath("$.epics[?(@.id=='epic_inc1')].title").value("Epic 1"))
+        .andExpect(jsonPath("$.epics[?(@.id=='epic_inc2')].title").value("Epic 2"));
+  }
+
+  @Test
+  void getRelease_withIncludeEpicsTasks_shouldReturnFullContext() throws Exception {
+    Release release =
+        releaseRepository.save(
+            new Release("rel_fullinc", testProject, 1, "REL-R1", "Release Full Context"));
+
+    // Create epic assigned to this release
+    Epic epic = new Epic("epic_fullinc", testProject, 1, "REL-E1", "Epic With Tasks", testUser);
+    epic.setReleaseId(release.getId());
+    epicRepository.save(epic);
+
+    // Create tasks assigned to the epic
+    Task task1 = new Task("task_inc1", testProject, 1, "REL-T1", "Task 1", testUser);
+    task1.setEpic(epic);
+    taskRepository.save(task1);
+
+    Task task2 = new Task("task_inc2", testProject, 2, "REL-T2", "Task 2", testUser);
+    task2.setEpic(epic);
+    taskRepository.save(task2);
+
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
+                    testProject.getPublicId(),
+                    "rel_fullinc")
+                .with(user("user"))
+                .param("include", "epics,tasks"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("rel_fullinc"))
+        .andExpect(jsonPath("$.name").value("Release Full Context"))
+        .andExpect(jsonPath("$.epics").isArray())
+        .andExpect(jsonPath("$.epics.length()").value(1))
+        .andExpect(jsonPath("$.epics[0].id").value("epic_fullinc"))
+        .andExpect(jsonPath("$.epics[0].tasks").isArray())
+        .andExpect(jsonPath("$.epics[0].tasks.length()").value(2));
   }
 }
