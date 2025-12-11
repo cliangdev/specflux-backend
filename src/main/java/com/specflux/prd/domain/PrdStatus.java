@@ -5,6 +5,7 @@ public enum PrdStatus {
   DRAFT("draft"),
   IN_REVIEW("in_review"),
   APPROVED("approved"),
+  IMPLEMENTED("implemented"),
   ARCHIVED("archived");
 
   private final String value;
