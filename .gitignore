@@ -71,8 +71,8 @@ Thumbs.db
 application-local.yml
 application-local.properties
 
-# claude
-CLAUDE.md
+# Claude (local overrides only - project CLAUDE.md is tracked)
+# CLAUDE.local.md
 
 # Firebase emulator data (keep firebase.json and Dockerfile tracked)
 firebase/.cache/
