@@ -2038,7 +2038,7 @@ components:
     # PRD
     PrdStatus:
       type: string
-      enum: [DRAFT, IN_REVIEW, APPROVED, ARCHIVED]
+      enum: [DRAFT, IN_REVIEW, APPROVED, IMPLEMENTED, ARCHIVED]
 
     PrdDocumentType:
       type: string

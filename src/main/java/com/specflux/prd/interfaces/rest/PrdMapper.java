@@ -109,6 +109,7 @@ public class PrdMapper {
       case DRAFT -> PrdStatus.DRAFT;
       case IN_REVIEW -> PrdStatus.IN_REVIEW;
       case APPROVED -> PrdStatus.APPROVED;
+      case IMPLEMENTED -> PrdStatus.IMPLEMENTED;
       case ARCHIVED -> PrdStatus.ARCHIVED;
     };
   }
@@ -124,6 +125,7 @@ public class PrdMapper {
       case DRAFT -> PrdStatusDto.DRAFT;
       case IN_REVIEW -> PrdStatusDto.IN_REVIEW;
       case APPROVED -> PrdStatusDto.APPROVED;
+      case IMPLEMENTED -> PrdStatusDto.IMPLEMENTED;
       case ARCHIVED -> PrdStatusDto.ARCHIVED;
     };
   }
