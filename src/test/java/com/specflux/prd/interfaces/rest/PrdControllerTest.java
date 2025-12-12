@@ -304,15 +304,27 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("APPROVED"));
 
-    // APPROVED -> ARCHIVED
+    // APPROVED -> IMPLEMENTED
     UpdatePrdRequestDto request3 = new UpdatePrdRequestDto();
-    request3.setStatus(PrdStatusDto.ARCHIVED);
+    request3.setStatus(PrdStatusDto.IMPLEMENTED);
     mockMvc
         .perform(
             put("/api/projects/{projectRef}/prds/{prdRef}", testProject.getPublicId(), "prd_status")
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request3)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("IMPLEMENTED"));
+
+    // IMPLEMENTED -> ARCHIVED
+    UpdatePrdRequestDto request4 = new UpdatePrdRequestDto();
+    request4.setStatus(PrdStatusDto.ARCHIVED);
+    mockMvc
+        .perform(
+            put("/api/projects/{projectRef}/prds/{prdRef}", testProject.getPublicId(), "prd_status")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request4)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("ARCHIVED"));
   }
@@ -401,6 +413,43 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.length()").value(1))
         .andExpect(jsonPath("$.data[0].status").value("APPROVED"));
+  }
+
+  @Test
+  void listPrds_withImplementedStatusFilter_shouldReturnFilteredList() throws Exception {
+    Prd prd1 =
+        new Prd(
+            "prd_draft2",
+            testProject,
+            1,
+            "PRDT-P1",
+            "Draft PRD",
+            ".specflux/prds/draft2",
+            testUser);
+    prd1.setStatus(PrdStatus.DRAFT);
+    prdRepository.save(prd1);
+
+    Prd prd2 =
+        new Prd(
+            "prd_impl",
+            testProject,
+            2,
+            "PRDT-P2",
+            "Implemented PRD",
+            ".specflux/prds/implemented",
+            testUser);
+    prd2.setStatus(PrdStatus.IMPLEMENTED);
+    prdRepository.save(prd2);
+
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/prds", testProject.getPublicId())
+                .with(user("user"))
+                .param("status", "IMPLEMENTED"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].status").value("IMPLEMENTED"))
+        .andExpect(jsonPath("$.data[0].title").value("Implemented PRD"));
   }
 
   @Test
