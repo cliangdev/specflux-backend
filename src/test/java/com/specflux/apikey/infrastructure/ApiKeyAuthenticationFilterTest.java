@@ -78,6 +78,9 @@ class ApiKeyAuthenticationFilterTest extends AbstractIntegrationTest {
 
   @Test
   void authenticatedRequest_withExpiredApiKey_shouldReturn401() throws Exception {
+    var apiKey = apiKeyRepository.findByUserId(testUser.getId()).get(0);
+    apiKeyService.revokeKey(apiKey.getPublicId(), testUser.getId());
+
     var expiredResult =
         apiKeyService.createApiKey(
             testUser.getId(), "Expired Key", java.time.Instant.now().minusSeconds(3600));
@@ -105,7 +108,7 @@ class ApiKeyAuthenticationFilterTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void publicEndpoint_swagger_shouldNotRequireAuth() throws Exception {
-    mockMvc.perform(get("/swagger-ui.html")).andExpect(status().is3xxRedirection());
+  void publicEndpoint_apiDocs_shouldNotRequireAuth() throws Exception {
+    mockMvc.perform(get("/api-docs")).andExpect(status().isOk());
   }
 }
