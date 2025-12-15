@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "specflux-api-collection",
     "name": "SpecFlux API",
-    "description": "REST API for SpecFlux - AI-Powered Multi-Repo Development Orchestrator.\n\n## Authentication\nAll API endpoints require Firebase JWT authentication. Use the \"1. Authentication\" folder to get a token first.\n\n## Usage\n1. Import this collection and the environment file\n2. Run \"Get Firebase Token\" to authenticate\n3. The token is automatically saved to the environment\n4. All other requests will use the token automatically",
+    "description": "REST API for SpecFlux - AI-Powered Multi-Repo Development Orchestrator.\n\n## Authentication\nSupports two authentication methods:\n\n### 1. SpecFlux API Key (Recommended)\nUse a SpecFlux API key for CLI/automation:\n- Generate key in SpecFlux Settings > API Keys\n- Set `apiKey` variable in the environment\n- All requests automatically use Bearer token auth\n\n### 2. Firebase JWT Token\nUse Firebase for web/mobile apps:\n- Run \"Get Firebase Token\" to authenticate\n- Token is automatically saved to environment\n\n## Usage\n1. Import this collection and the environment file\n2. Set `apiKey` OR run Firebase auth to get a token\n3. All requests will use the available auth automatically",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -15,6 +15,31 @@
       }
     ]
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Use API key if available, otherwise use Firebase token",
+          "const apiKey = pm.environment.get('apiKey');",
+          "const firebaseToken = pm.environment.get('authToken');",
+          "",
+          "if (apiKey && apiKey.startsWith('sfx_')) {",
+          "    pm.request.headers.upsert({",
+          "        key: 'Authorization',",
+          "        value: 'Bearer ' + apiKey",
+          "    });",
+          "} else if (firebaseToken) {",
+          "    pm.request.headers.upsert({",
+          "        key: 'Authorization',",
+          "        value: 'Bearer ' + firebaseToken",
+          "    });",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
   "variable": [
     {
       "key": "baseUrl",
@@ -22,18 +47,20 @@
     },
     {
       "key": "firebaseEmulatorHost",
-      "value": "localhost:9099",
-      "description": "Firebase Auth Emulator host:port"
+      "value": "localhost:9099"
     },
     {
       "key": "testEmail",
-      "value": "dev@specflux.local",
-      "description": "Test user email for Firebase Emulator"
+      "value": "dev@specflux.local"
     },
     {
       "key": "testPassword",
-      "value": "devpass123",
-      "description": "Test user password for Firebase Emulator"
+      "value": "devpass123"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "description": "SpecFlux API key (sfx_...) - preferred auth method"
     },
     {
       "key": "authToken",
@@ -42,50 +69,84 @@
     },
     {
       "key": "refreshToken",
-      "value": "",
-      "description": "Firebase refresh token - populated by auth requests"
+      "value": ""
     },
     {
       "key": "projectRef",
-      "value": "SPECFLUCMI",
-      "description": "Project key or publicId"
+      "value": "SPEC"
     },
     {
       "key": "userRef",
-      "value": "",
-      "description": "User publicId - populated by Get Current User"
+      "value": ""
     },
     {
       "key": "epicRef",
-      "value": "",
-      "description": "Epic publicId - populated by List/Create Epic"
+      "value": ""
     },
     {
       "key": "prdRef",
-      "value": "",
-      "description": "PRD publicId - populated by List/Create PRD"
+      "value": ""
     },
     {
       "key": "prdDocId",
-      "value": "",
-      "description": "PRD Document ID - populated by Add Document"
+      "value": ""
     },
     {
       "key": "taskRef",
-      "value": "",
-      "description": "Task publicId - populated by List/Create Task"
+      "value": ""
     },
     {
       "key": "releaseRef",
-      "value": "",
-      "description": "Release publicId - populated by List/Create Release"
+      "value": ""
+    },
+    {
+      "key": "criteriaId",
+      "value": ""
+    },
+    {
+      "key": "apiKeyId",
+      "value": ""
     }
   ],
   "item": [
     {
       "name": "1. Authentication",
-      "description": "Firebase authentication flow. Run these first to get a token.",
+      "description": "Authentication options. Use API Key (recommended) or Firebase JWT.",
       "item": [
+        {
+          "name": "Validate API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('API key is valid', function() {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.publicId).to.match(/^usr_/);",
+                  "    });",
+                  "    console.log('API key validated successfully');",
+                  "} else if (pm.response.code === 401) {",
+                  "    pm.test('API key is invalid or expired', function() {",
+                  "        pm.expect.fail('Check your apiKey variable');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Validate your SpecFlux API key by calling /users/me.\n\n**Setup:**\n1. Get API key from SpecFlux Settings > API Keys\n2. Set `apiKey` variable: `sfx_your_key_here`\n3. Run this request to validate"
+          }
+        },
         {
           "name": "Get Firebase Token (Emulator)",
           "event": [
@@ -98,7 +159,7 @@
                   "    if (response.idToken) {",
                   "        pm.environment.set('authToken', response.idToken);",
                   "        pm.environment.set('refreshToken', response.refreshToken);",
-                  "        console.log('Token saved to environment');",
+                  "        console.log('Firebase token saved to environment');",
                   "    }",
                   "}"
                 ],
@@ -133,7 +194,7 @@
                 }
               ]
             },
-            "description": "Sign in with email/password using Firebase Emulator.\n\n**First Time Setup:**\n1. Create a test user in Firebase Emulator UI (http://localhost:4000/auth)\n2. Update `testEmail` and `testPassword` in the environment\n3. Run this request to get a token"
+            "description": "Sign in with Firebase Emulator to get a JWT token.\n\nUse this if you don't have a SpecFlux API key."
           }
         },
         {
@@ -148,7 +209,6 @@
                   "    if (response.idToken) {",
                   "        pm.environment.set('authToken', response.idToken);",
                   "        pm.environment.set('refreshToken', response.refreshToken);",
-                  "        console.log('User created and token saved');",
                   "    }",
                   "}"
                 ],
@@ -183,7 +243,7 @@
                 }
               ]
             },
-            "description": "Create a new test user in Firebase Emulator. Only needed once."
+            "description": "Create a new test user in Firebase Emulator."
           }
         },
         {
@@ -198,7 +258,6 @@
                   "    if (response.id_token) {",
                   "        pm.environment.set('authToken', response.id_token);",
                   "        pm.environment.set('refreshToken', response.refresh_token);",
-                  "        console.log('Token refreshed');",
                   "    }",
                   "}"
                 ],
@@ -232,15 +291,112 @@
                   "value": "fake-api-key"
                 }
               ]
-            },
-            "description": "Refresh an expired ID token using the refresh token."
+            }
           }
         }
       ]
     },
     {
-      "name": "2. User Profile",
-      "description": "User profile management - get current user, update profile, lookup users.",
+      "name": "2. API Keys",
+      "description": "Manage SpecFlux API keys for CLI/automation authentication.",
+      "item": [
+        {
+          "name": "Create API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.id) {",
+                  "        pm.environment.set('apiKeyId', response.id);",
+                  "        console.log('API Key ID saved:', response.id);",
+                  "    }",
+                  "    if (response.key) {",
+                  "        console.log('IMPORTANT: Save this key, it will not be shown again!');",
+                  "        console.log('Key:', response.key);",
+                  "    }",
+                  "    pm.test('API key created', function() {",
+                  "        pm.expect(response.id).to.match(/^key_/);",
+                  "        pm.expect(response.key).to.match(/^sfx_/);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Key\",\n  \"expiresAt\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/api-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "api-keys"]
+            },
+            "description": "Create a new API key.\n\n**IMPORTANT:** The full key is only shown once at creation. Save it immediately!\n\n**Fields:**\n- `name`: Display name (optional)\n- `expiresAt`: Expiration timestamp ISO 8601 (optional)"
+          }
+        },
+        {
+          "name": "List API Keys",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Returns array', function() {",
+                  "        pm.expect(response).to.be.an('array');",
+                  "    });",
+                  "    if (response.length > 0) {",
+                  "        pm.environment.set('apiKeyId', response[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/api-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "api-keys"]
+            },
+            "description": "List all API keys for the current user.\n\n**Note:** Full keys are NOT returned in list responses."
+          }
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/api-keys/{{apiKeyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "api-keys", "{{apiKeyId}}"]
+            },
+            "description": "Revoke an API key.\n\nRevoked keys cannot be used for authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. User Profile",
+      "description": "User profile management.",
       "item": [
         {
           "name": "Get Current User (Me)",
@@ -253,14 +409,7 @@
                   "    const response = pm.response.json();",
                   "    if (response.publicId) {",
                   "        pm.environment.set('userRef', response.publicId);",
-                  "        console.log('Saved userRef:', response.publicId);",
                   "    }",
-                  "    pm.test('User has publicId', function() {",
-                  "        pm.expect(response.publicId).to.match(/^usr_/);",
-                  "    });",
-                  "    pm.test('User has email', function() {",
-                  "        pm.expect(response.email).to.be.a('string');",
-                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -275,7 +424,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["users", "me"]
             },
-            "description": "Get the currently authenticated user's profile.\n\nThis endpoint auto-provisions the user on first call - if the user doesn't exist in the database, it creates them from the Firebase token claims.\n\n**Auto-saves:** `userRef` variable for use in other requests."
+            "description": "Get the current authenticated user's profile."
           }
         },
         {
@@ -296,8 +445,7 @@
               "raw": "{{baseUrl}}/users/me",
               "host": ["{{baseUrl}}"],
               "path": ["users", "me"]
-            },
-            "description": "Update the current user's display name and/or avatar URL.\n\nBoth fields are optional - only provided fields will be updated."
+            }
           }
         },
         {
@@ -309,15 +457,14 @@
               "raw": "{{baseUrl}}/users/{{userRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["users", "{{userRef}}"]
-            },
-            "description": "Look up a user by their public ID.\n\nUses `userRef` from \"Get Current User\" response. Run that request first to populate the variable."
+            }
           }
         }
       ]
     },
     {
-      "name": "3. Projects",
-      "description": "Project management - create, list, update, delete projects.",
+      "name": "4. Projects",
+      "description": "Project management.",
       "item": [
         {
           "name": "List Projects",
@@ -329,13 +476,8 @@
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    if (response.data && response.data.length > 0) {",
-                  "        const firstProject = response.data[0];",
-                  "        pm.environment.set('projectRef', firstProject.projectKey || firstProject.publicId);",
-                  "        console.log('Saved projectRef:', firstProject.projectKey || firstProject.publicId);",
+                  "        pm.environment.set('projectRef', response.data[0].projectKey || response.data[0].publicId);",
                   "    }",
-                  "    pm.test('Response has data array', function() {",
-                  "        pm.expect(response.data).to.be.an('array');",
-                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -350,18 +492,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["projects"],
               "query": [
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "cursor",
-                  "value": "",
-                  "disabled": true
-                }
+                {"key": "limit", "value": "20"},
+                {"key": "cursor", "value": "", "disabled": true}
               ]
-            },
-            "description": "List all projects for the current user.\n\n**Auto-saves:** First project's `projectKey` to `projectRef` variable."
+            }
           }
         },
         {
@@ -371,12 +505,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "if (pm.response.code === 201) {",
                   "    const response = pm.response.json();",
-                  "    if (response.projectKey || response.publicId) {",
-                  "        pm.environment.set('projectRef', response.projectKey || response.publicId);",
-                  "        console.log('Saved projectRef:', response.projectKey || response.publicId);",
-                  "    }",
+                  "    pm.environment.set('projectRef', response.projectKey || response.publicId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -385,12 +516,7 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"projectKey\": \"SPEC\",\n  \"name\": \"SpecFlux\",\n  \"description\": \"AI-Powered Multi-Repo Development Orchestrator\"\n}"
@@ -399,8 +525,7 @@
               "raw": "{{baseUrl}}/projects",
               "host": ["{{baseUrl}}"],
               "path": ["projects"]
-            },
-            "description": "Create a new project.\n\n- `projectKey`: Unique identifier (uppercase, 2-10 chars)\n- `name`: Display name\n- `description`: Optional description\n\n**Auto-saves:** `projectRef` variable."
+            }
           }
         },
         {
@@ -412,20 +537,14 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}"]
-            },
-            "description": "Get a project by its key or public ID.\n\nUses `projectRef` from List/Create response."
+            }
           }
         },
         {
           "name": "Update Project",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"SpecFlux Updated\",\n  \"description\": \"Updated description\"\n}"
@@ -434,8 +553,7 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}"]
-            },
-            "description": "Update a project's name and/or description."
+            }
           }
         },
         {
@@ -447,15 +565,14 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}"]
-            },
-            "description": "Delete a project."
+            }
           }
         }
       ]
     },
     {
-      "name": "4. PRDs",
-      "description": "Product Requirements Documents - create, list, update, delete PRDs and their supporting documents.",
+      "name": "5. PRDs",
+      "description": "Product Requirements Documents.",
       "item": [
         {
           "name": "List PRDs",
@@ -467,18 +584,8 @@
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    if (response.data && response.data.length > 0) {",
-                  "        const firstPrd = response.data[0];",
-                  "        pm.environment.set('prdRef', firstPrd.id);",
-                  "        console.log('Saved prdRef:', firstPrd.id);",
+                  "        pm.environment.set('prdRef', response.data[0].id);",
                   "    }",
-                  "    pm.test('Response has data array', function() {",
-                  "        pm.expect(response.data).to.be.an('array');",
-                  "    });",
-                  "    pm.test('PRDs have id', function() {",
-                  "        if (response.data.length > 0) {",
-                  "            pm.expect(response.data[0].id).to.match(/^prd_/);",
-                  "        }",
-                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -493,58 +600,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "prds"],
               "query": [
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "cursor",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
-                }
+                {"key": "limit", "value": "20"},
+                {"key": "status", "value": "", "disabled": true}
               ]
-            },
-            "description": "List all PRDs for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (DRAFT, IN_REVIEW, APPROVED, ARCHIVED)\n\n**Auto-saves:** First PRD's `id` to `prdRef` variable."
-          }
-        },
-        {
-          "name": "Get PRD",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.test('PRD has id', function() {",
-                  "        pm.expect(response.id).to.match(/^prd_/);",
-                  "    });",
-                  "    pm.test('PRD has title', function() {",
-                  "        pm.expect(response.title).to.be.a('string');",
-                  "    });",
-                  "    pm.test('PRD has documents array', function() {",
-                  "        pm.expect(response.documents).to.be.an('array');",
-                  "    });",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}"]
-            },
-            "description": "Get a PRD by its public ID or display key.\n\nUses `prdRef` from List PRDs response."
           }
         },
         {
@@ -554,18 +613,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "if (pm.response.code === 201) {",
                   "    const response = pm.response.json();",
-                  "    if (response.id) {",
-                  "        pm.environment.set('prdRef', response.id);",
-                  "        console.log('Saved prdRef:', response.id);",
-                  "    }",
-                  "    pm.test('PRD has id', function() {",
-                  "        pm.expect(response.id).to.match(/^prd_/);",
-                  "    });",
-                  "    pm.test('PRD has folderPath', function() {",
-                  "        pm.expect(response.folderPath).to.include('.specflux/prds/');",
-                  "    });",
+                  "    pm.environment.set('prdRef', response.id);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -574,44 +624,44 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Authentication System\",\n  \"description\": \"User authentication with OAuth2 and social login\"\n}"
+              "raw": "{\n  \"title\": \"Authentication System\",\n  \"description\": \"User authentication with OAuth2\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/prds",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "prds"]
-            },
-            "description": "Create a new PRD in a project.\n\n**Required:**\n- `title`: PRD title\n\n**Optional:**\n- `description`: PRD description\n- `folderPath`: Custom folder path (auto-generated if not provided)\n\n**Auto-saves:** `prdRef` variable.\n\n**Note:** PRD is created with DRAFT status. Use Update PRD to change status."
+            }
+          }
+        },
+        {
+          "name": "Get PRD",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}"]
+            }
           }
         },
         {
           "name": "Update PRD",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Authentication System - Updated\",\n  \"description\": \"Updated description\",\n  \"status\": \"IN_REVIEW\"\n}"
+              "raw": "{\n  \"title\": \"Authentication System - Updated\",\n  \"status\": \"APPROVED\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}"]
-            },
-            "description": "Update a PRD's properties.\n\n**Optional fields:**\n- `title`: PRD title\n- `description`: PRD description\n- `status`: DRAFT, IN_REVIEW, APPROVED, ARCHIVED\n\nAll fields are optional - only provided fields will be updated."
+            }
           }
         },
         {
@@ -623,8 +673,7 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}"]
-            },
-            "description": "Delete a PRD and all its documents.\n\n**Warning:** This also removes the PRD reference from any linked epics."
+            }
           }
         },
         {
@@ -634,17 +683,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "if (pm.response.code === 201) {",
                   "    const response = pm.response.json();",
                   "    if (response.documents && response.documents.length > 0) {",
-                  "        const lastDoc = response.documents[response.documents.length - 1];",
-                  "        pm.environment.set('prdDocId', lastDoc.id);",
-                  "        console.log('Saved prdDocId:', lastDoc.id);",
+                  "        pm.environment.set('prdDocId', response.documents[response.documents.length - 1].id);",
                   "    }",
-                  "    pm.test('PRD has documents', function() {",
-                  "        pm.expect(response.documents).to.be.an('array');",
-                  "        pm.expect(response.documents.length).to.be.greaterThan(0);",
-                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -653,12 +696,7 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fileName\": \"prd.md\",\n  \"filePath\": \".specflux/prds/auth-system/prd.md\",\n  \"documentType\": \"PRD\",\n  \"isPrimary\": true\n}"
@@ -667,30 +705,23 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}/documents",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}", "documents"]
-            },
-            "description": "Add a document to a PRD.\n\n**Required:**\n- `fileName`: File name (e.g., \"prd.md\")\n- `filePath`: Full path relative to project root\n\n**Optional:**\n- `documentType`: PRD, WIREFRAME, MOCKUP, DESIGN, OTHER (default: OTHER)\n- `isPrimary`: Whether this is the main PRD document (default: false)\n- `orderIndex`: Display order (auto-incremented if not provided)\n\n**Auto-saves:** `prdDocId` variable."
+            }
           }
         },
         {
           "name": "Update Document",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"documentType\": \"WIREFRAME\",\n  \"isPrimary\": false,\n  \"orderIndex\": 2\n}"
+              "raw": "{\n  \"documentType\": \"WIREFRAME\",\n  \"isPrimary\": false\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}/documents/{{prdDocId}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}", "documents", "{{prdDocId}}"]
-            },
-            "description": "Update a document's metadata.\n\n**Optional fields:**\n- `documentType`: PRD, WIREFRAME, MOCKUP, DESIGN, OTHER\n- `isPrimary`: Whether this is the main PRD document\n- `orderIndex`: Display order\n\nAll fields are optional - only provided fields will be updated."
+            }
           }
         },
         {
@@ -702,15 +733,14 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}/prds/{{prdRef}}/documents/{{prdDocId}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "prds", "{{prdRef}}", "documents", "{{prdDocId}}"]
-            },
-            "description": "Delete a document from a PRD.\n\n**Note:** This only removes the document reference, not the actual file."
+            }
           }
         }
       ]
     },
     {
-      "name": "5. Epics",
-      "description": "Epic management - list, create, update, delete epics within a project. Epics can be linked to PRDs.",
+      "name": "6. Epics",
+      "description": "Epic management with acceptance criteria.",
       "item": [
         {
           "name": "List Epics",
@@ -722,18 +752,8 @@
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    if (response.data && response.data.length > 0) {",
-                  "        const firstEpic = response.data[0];",
-                  "        pm.environment.set('epicRef', firstEpic.publicId);",
-                  "        console.log('Saved epicRef:', firstEpic.publicId);",
+                  "        pm.environment.set('epicRef', response.data[0].id || response.data[0].publicId);",
                   "    }",
-                  "    pm.test('Response has data array', function() {",
-                  "        pm.expect(response.data).to.be.an('array');",
-                  "    });",
-                  "    pm.test('Epics have publicId', function() {",
-                  "        if (response.data.length > 0) {",
-                  "            pm.expect(response.data[0].publicId).to.match(/^epic_/);",
-                  "        }",
-                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -748,60 +768,12 @@
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "epics"],
               "query": [
-                {
-                  "key": "limit",
-                  "value": "50"
-                },
-                {
-                  "key": "cursor",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "releaseRef",
-                  "value": "",
-                  "disabled": true
-                }
+                {"key": "limit", "value": "50"},
+                {"key": "status", "value": "", "disabled": true},
+                {"key": "prdRef", "value": "", "disabled": true},
+                {"key": "releaseRef", "value": "", "disabled": true}
               ]
-            },
-            "description": "List all epics for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (DRAFT, IN_PROGRESS, etc.)\n- `releaseRef`: Filter by release publicId\n\n**Auto-saves:** First epic's `publicId` to `epicRef` variable."
-          }
-        },
-        {
-          "name": "Get Epic",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.test('Epic has publicId', function() {",
-                  "        pm.expect(response.publicId).to.match(/^epic_/);",
-                  "    });",
-                  "    pm.test('Epic has title', function() {",
-                  "        pm.expect(response.title).to.be.a('string');",
-                  "    });",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}"]
-            },
-            "description": "Get an epic by its public ID.\n\nUses `epicRef` from List Epics response."
           }
         },
         {
@@ -811,15 +783,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "if (pm.response.code === 201) {",
                   "    const response = pm.response.json();",
-                  "    if (response.publicId) {",
-                  "        pm.environment.set('epicRef', response.publicId);",
-                  "        console.log('Saved epicRef:', response.publicId);",
-                  "    }",
-                  "    pm.test('Epic has publicId', function() {",
-                  "        pm.expect(response.publicId).to.match(/^epic_/);",
-                  "    });",
+                  "    pm.environment.set('epicRef', response.id || response.publicId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -828,44 +794,45 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"User Authentication\",\n  \"description\": \"Implement complete user authentication flow\",\n  \"status\": \"DRAFT\",\n  \"priority\": \"HIGH\"\n}"
+              "raw": "{\n  \"title\": \"User Authentication\",\n  \"description\": \"Implement complete user authentication flow\",\n  \"prdRef\": \"{{prdRef}}\",\n  \"acceptanceCriteria\": [\n    {\"criteria\": \"Users can sign up with email/password\"},\n    {\"criteria\": \"Users can log in with existing credentials\"}\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/epics",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "epics"]
             },
-            "description": "Create a new epic in a project.\n\n**Required:**\n- `title`: Epic title\n\n**Optional:**\n- `description`: Epic description\n- `status`: DRAFT, IN_PROGRESS, REVIEW, DONE\n- `priority`: LOW, MEDIUM, HIGH, CRITICAL\n- `releaseRef`: Release to assign epic to\n\n**Auto-saves:** `epicRef` variable."
+            "description": "Create an epic with acceptance criteria.\n\n**Required:**\n- `title`\n- `acceptanceCriteria` (array of objects with `criteria` property)\n\n**Optional:**\n- `prdRef`: Link to source PRD\n- `releaseRef`: Assign to release"
+          }
+        },
+        {
+          "name": "Get Epic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}"]
+            }
           }
         },
         {
           "name": "Update Epic",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"User Authentication - Updated\",\n  \"status\": \"IN_PROGRESS\",\n  \"priority\": \"CRITICAL\"\n}"
+              "raw": "{\n  \"title\": \"User Authentication - Updated\",\n  \"status\": \"IN_PROGRESS\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}"]
-            },
-            "description": "Update an epic's properties.\n\nAll fields are optional - only provided fields will be updated."
+            }
           }
         },
         {
@@ -877,15 +844,100 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}"]
+            }
+          }
+        },
+        {
+          "name": "List Epic Acceptance Criteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        pm.environment.set('criteriaId', response.data[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}/acceptance-criteria",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}", "acceptance-criteria"]
+            }
+          }
+        },
+        {
+          "name": "Add Epic Acceptance Criteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('criteriaId', response.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"criteria\": \"Password reset via email works\"\n}"
             },
-            "description": "Delete an epic.\n\n**Warning:** This may also delete associated tasks depending on cascade settings."
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}/acceptance-criteria",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}", "acceptance-criteria"]
+            }
+          }
+        },
+        {
+          "name": "Update Epic Acceptance Criteria",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"criteria\": \"Updated criteria text\",\n  \"isMet\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}/acceptance-criteria/{{criteriaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}", "acceptance-criteria", "{{criteriaId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Epic Acceptance Criteria",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/epics/{{epicRef}}/acceptance-criteria/{{criteriaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "epics", "{{epicRef}}", "acceptance-criteria", "{{criteriaId}}"]
+            }
           }
         }
       ]
     },
     {
-      "name": "6. Tasks",
-      "description": "Task management - list, create, update, delete tasks within a project.",
+      "name": "7. Tasks",
+      "description": "Task management with acceptance criteria and dependencies.",
       "item": [
         {
           "name": "List Tasks",
@@ -897,18 +949,8 @@
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    if (response.data && response.data.length > 0) {",
-                  "        const firstTask = response.data[0];",
-                  "        pm.environment.set('taskRef', firstTask.publicId);",
-                  "        console.log('Saved taskRef:', firstTask.publicId);",
+                  "        pm.environment.set('taskRef', response.data[0].id || response.data[0].publicId);",
                   "    }",
-                  "    pm.test('Response has data array', function() {",
-                  "        pm.expect(response.data).to.be.an('array');",
-                  "    });",
-                  "    pm.test('Tasks have publicId', function() {",
-                  "        if (response.data.length > 0) {",
-                  "            pm.expect(response.data[0].publicId).to.match(/^task_/);",
-                  "        }",
-                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -923,63 +965,12 @@
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "tasks"],
               "query": [
-                {
-                  "key": "limit",
-                  "value": "50"
-                },
-                {
-                  "key": "cursor",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "epicRef",
-                  "value": "",
-                  "disabled": true
-                }
+                {"key": "limit", "value": "50"},
+                {"key": "status", "value": "", "disabled": true},
+                {"key": "epicRef", "value": "", "disabled": true},
+                {"key": "priority", "value": "", "disabled": true}
               ]
-            },
-            "description": "List all tasks for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (BACKLOG, TODO, IN_PROGRESS, etc.)\n- `epicRef`: Filter by epic publicId\n\n**Auto-saves:** First task's `publicId` to `taskRef` variable."
-          }
-        },
-        {
-          "name": "Get Task",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.test('Task has publicId', function() {",
-                  "        pm.expect(response.publicId).to.match(/^task_/);",
-                  "    });",
-                  "    pm.test('Task has title', function() {",
-                  "        pm.expect(response.title).to.be.a('string');",
-                  "    });",
-                  "    pm.test('Task has status', function() {",
-                  "        pm.expect(response.status).to.be.a('string');",
-                  "    });",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}"]
-            },
-            "description": "Get a task by its public ID.\n\nUses `taskRef` from List Tasks response."
           }
         },
         {
@@ -989,15 +980,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "if (pm.response.code === 201) {",
                   "    const response = pm.response.json();",
-                  "    if (response.publicId) {",
-                  "        pm.environment.set('taskRef', response.publicId);",
-                  "        console.log('Saved taskRef:', response.publicId);",
-                  "    }",
-                  "    pm.test('Task has publicId', function() {",
-                  "        pm.expect(response.publicId).to.match(/^task_/);",
-                  "    });",
+                  "    pm.environment.set('taskRef', response.id || response.publicId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -1006,44 +991,44 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Implement login form\",\n  \"description\": \"Create React login form with email/password fields\",\n  \"status\": \"BACKLOG\",\n  \"epicRef\": \"{{epicRef}}\"\n}"
+              "raw": "{\n  \"title\": \"Implement login form\",\n  \"description\": \"Create React login form with email/password\",\n  \"epicRef\": \"{{epicRef}}\",\n  \"priority\": \"HIGH\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "tasks"]
-            },
-            "description": "Create a new task in a project.\n\n**Required:**\n- `title`: Task title\n\n**Optional:**\n- `description`: Task description\n- `status`: BACKLOG, TODO, IN_PROGRESS, IN_REVIEW, DONE\n- `epicRef`: Epic to assign task to\n- `requiresApproval`: Whether task needs approval before completion\n- `estimatedDuration`: Estimated time (e.g., \"2h\", \"3d\")\n\n**Auto-saves:** `taskRef` variable."
+            }
+          }
+        },
+        {
+          "name": "Get Task",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}"]
+            }
           }
         },
         {
           "name": "Update Task",
           "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Implement login form - Updated\",\n  \"status\": \"IN_PROGRESS\"\n}"
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"priority\": \"CRITICAL\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}"]
-            },
-            "description": "Update a task's properties.\n\nAll fields are optional - only provided fields will be updated."
+            }
           }
         },
         {
@@ -1055,15 +1040,141 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}"]
+            }
+          }
+        },
+        {
+          "name": "List Task Acceptance Criteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        pm.environment.set('criteriaId', response.data[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}/acceptance-criteria",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}", "acceptance-criteria"]
+            }
+          }
+        },
+        {
+          "name": "Add Task Acceptance Criteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('criteriaId', response.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"criteria\": \"Form validates email format\"\n}"
             },
-            "description": "Delete a task."
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}/acceptance-criteria",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}", "acceptance-criteria"]
+            }
+          }
+        },
+        {
+          "name": "Update Task Acceptance Criteria",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isMet\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}/acceptance-criteria/{{criteriaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}", "acceptance-criteria", "{{criteriaId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Task Acceptance Criteria",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}/acceptance-criteria/{{criteriaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}", "acceptance-criteria", "{{criteriaId}}"]
+            }
+          }
+        },
+        {
+          "name": "List Task Dependencies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}", "dependencies"]
+            }
+          }
+        },
+        {
+          "name": "Add Task Dependency",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dependsOnTaskRef\": \"SPEC-41\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}", "dependencies"]
+            },
+            "description": "Add a dependency - this task depends on another task."
+          }
+        },
+        {
+          "name": "Remove Task Dependency",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/tasks/{{taskRef}}/dependencies/{{dependsOnTaskRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "tasks", "{{taskRef}}", "dependencies", "{{dependsOnTaskRef}}"]
+            }
           }
         }
       ]
     },
     {
-      "name": "7. Releases",
-      "description": "Release management - list, create, update, delete releases within a project.",
+      "name": "8. Releases",
+      "description": "Release/milestone management.",
       "item": [
         {
           "name": "List Releases",
@@ -1075,18 +1186,8 @@
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    if (response.data && response.data.length > 0) {",
-                  "        const firstRelease = response.data[0];",
-                  "        pm.environment.set('releaseRef', firstRelease.publicId);",
-                  "        console.log('Saved releaseRef:', firstRelease.publicId);",
+                  "        pm.environment.set('releaseRef', response.data[0].publicId);",
                   "    }",
-                  "    pm.test('Response has data array', function() {",
-                  "        pm.expect(response.data).to.be.an('array');",
-                  "    });",
-                  "    pm.test('Releases have publicId', function() {",
-                  "        if (response.data.length > 0) {",
-                  "            pm.expect(response.data[0].publicId).to.match(/^rel_/);",
-                  "        }",
-                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -1101,55 +1202,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "releases"],
               "query": [
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "cursor",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
-                }
+                {"key": "limit", "value": "20"},
+                {"key": "status", "value": "", "disabled": true}
               ]
-            },
-            "description": "List all releases for a project.\n\n**Query Parameters:**\n- `limit`: Max results (default 20, max 100)\n- `cursor`: Pagination cursor\n- `status`: Filter by status (PLANNED, IN_PROGRESS, RELEASED)\n\n**Auto-saves:** First release's `publicId` to `releaseRef` variable."
-          }
-        },
-        {
-          "name": "Get Release",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.test('Release has publicId', function() {",
-                  "        pm.expect(response.publicId).to.match(/^rel_/);",
-                  "    });",
-                  "    pm.test('Release has name', function() {",
-                  "        pm.expect(response.name).to.be.a('string');",
-                  "    });",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectRef}}/releases/{{releaseRef}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["projects", "{{projectRef}}", "releases", "{{releaseRef}}"]
-            },
-            "description": "Get a release by its public ID.\n\nUses `releaseRef` from List Releases response."
           }
         },
         {
@@ -1159,15 +1215,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "if (pm.response.code === 201) {",
                   "    const response = pm.response.json();",
-                  "    if (response.publicId) {",
-                  "        pm.environment.set('releaseRef', response.publicId);",
-                  "        console.log('Saved releaseRef:', response.publicId);",
-                  "    }",
-                  "    pm.test('Release has publicId', function() {",
-                  "        pm.expect(response.publicId).to.match(/^rel_/);",
-                  "    });",
+                  "    pm.environment.set('releaseRef', response.publicId);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -1176,34 +1226,35 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"v1.0.0\",\n  \"description\": \"Initial release with core features\",\n  \"status\": \"PLANNED\",\n  \"targetDate\": \"2025-03-01\"\n}"
+              "raw": "{\n  \"name\": \"v1.0.0\",\n  \"description\": \"Initial release\",\n  \"targetDate\": \"2025-03-01\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectRef}}/releases",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "releases"]
-            },
-            "description": "Create a new release in a project.\n\n**Required:**\n- `name`: Release name/version\n\n**Optional:**\n- `description`: Release description\n- `status`: PLANNED, IN_PROGRESS, RELEASED\n- `targetDate`: Target release date (ISO 8601)\n\n**Auto-saves:** `releaseRef` variable."
+            }
+          }
+        },
+        {
+          "name": "Get Release",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectRef}}/releases/{{releaseRef}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectRef}}", "releases", "{{releaseRef}}"]
+            }
           }
         },
         {
           "name": "Update Release",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"v1.0.0-rc1\",\n  \"status\": \"IN_PROGRESS\"\n}"
@@ -1212,8 +1263,7 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}/releases/{{releaseRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "releases", "{{releaseRef}}"]
-            },
-            "description": "Update a release's properties.\n\nAll fields are optional - only provided fields will be updated."
+            }
           }
         },
         {
@@ -1225,8 +1275,7 @@
               "raw": "{{baseUrl}}/projects/{{projectRef}}/releases/{{releaseRef}}",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectRef}}", "releases", "{{releaseRef}}"]
-            },
-            "description": "Delete a release.\n\n**Note:** Epics assigned to this release will have their release reference cleared."
+            }
           }
         }
       ]
