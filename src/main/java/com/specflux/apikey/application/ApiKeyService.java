@@ -13,7 +13,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.specflux.apikey.domain.ApiKey;
 import com.specflux.apikey.domain.ApiKeyRepository;
@@ -22,13 +22,15 @@ import com.specflux.shared.domain.PublicId;
 import com.specflux.user.domain.User;
 import com.specflux.user.domain.UserRepository;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * Application service for API key management.
  *
  * <p>Handles key generation, validation, and lifecycle operations.
  */
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class ApiKeyService {
 
   private static final Logger log = LoggerFactory.getLogger(ApiKeyService.class);
@@ -36,15 +38,10 @@ public class ApiKeyService {
   private static final int KEY_BYTES = 32; // 256 bits
   private static final int PREFIX_LENGTH = 12; // Characters to extract for prefix lookup
 
+  private final TransactionTemplate transactionTemplate;
   private final ApiKeyRepository apiKeyRepository;
   private final UserRepository userRepository;
-  private final SecureRandom secureRandom;
-
-  public ApiKeyService(ApiKeyRepository apiKeyRepository, UserRepository userRepository) {
-    this.apiKeyRepository = apiKeyRepository;
-    this.userRepository = userRepository;
-    this.secureRandom = new SecureRandom();
-  }
+  private final SecureRandom secureRandom = new SecureRandom();
 
   /**
    * Creates a new API key for a user.
@@ -80,14 +77,14 @@ public class ApiKeyService {
     }
 
     String publicId = PublicId.generate(EntityType.API_KEY).getValue();
-
     ApiKey apiKey = new ApiKey(publicId, user, keyPrefix, keyHash, name, expiresAt);
 
-    apiKey = apiKeyRepository.save(apiKey);
+    // Only the save operation needs a transaction
+    ApiKey saved = transactionTemplate.execute(status -> apiKeyRepository.save(apiKey));
 
     log.info("Created API key {} for user {}", publicId, user.getPublicId());
 
-    return new ApiKeyCreationResult(apiKey, fullKey);
+    return new ApiKeyCreationResult(saved, fullKey);
   }
 
   /**
@@ -96,7 +93,6 @@ public class ApiKeyService {
    * @param fullKey the full API key (sfx_...)
    * @return the user if key is valid, empty if invalid
    */
-  @Transactional
   public Optional<User> validateKey(String fullKey) {
     if (fullKey == null || !fullKey.startsWith(KEY_PREFIX)) {
       return Optional.empty();
@@ -129,9 +125,9 @@ public class ApiKeyService {
       return Optional.empty();
     }
 
-    // Update last used timestamp
+    // Update last used timestamp - only this needs a transaction
     apiKey.recordUsage();
-    apiKeyRepository.save(apiKey);
+    transactionTemplate.executeWithoutResult(status -> apiKeyRepository.save(apiKey));
 
     return Optional.of(apiKey.getUser());
   }
@@ -155,7 +151,9 @@ public class ApiKeyService {
     }
 
     apiKey.revoke();
-    apiKeyRepository.save(apiKey);
+
+    // Only the save operation needs a transaction
+    transactionTemplate.executeWithoutResult(status -> apiKeyRepository.save(apiKey));
 
     log.info("Revoked API key {}", publicId);
   }
@@ -166,7 +164,6 @@ public class ApiKeyService {
    * @param userId the user's internal ID
    * @return list of API keys (without secrets)
    */
-  @Transactional(readOnly = true)
   public List<ApiKey> listKeys(Long userId) {
     return apiKeyRepository.findByUserId(userId);
   }
@@ -177,7 +174,6 @@ public class ApiKeyService {
    * @param userId the user's internal ID
    * @return the active key if exists
    */
-  @Transactional(readOnly = true)
   public Optional<ApiKey> getActiveKey(Long userId) {
     return apiKeyRepository.findActiveByUserId(userId);
   }
