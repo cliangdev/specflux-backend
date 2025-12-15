@@ -15,12 +15,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.specflux.apikey.application.ApiKeyService;
+import com.specflux.apikey.infrastructure.ApiKeyAuthenticationFilter;
 
 /**
- * Security configuration for Firebase authentication.
+ * Security configuration for Firebase and API key authentication.
  *
- * <p>Configures stateless JWT-based authentication using Firebase tokens. Public endpoints (health
- * checks, OpenAPI docs) are permitted without authentication.
+ * <p>Configures stateless authentication using either Firebase tokens or API keys. API keys (sfx_
+ * prefix) are validated first, then Firebase tokens. Public endpoints (health checks, OpenAPI docs)
+ * are permitted without authentication.
  */
 @Configuration
 @EnableWebSecurity
@@ -28,9 +31,11 @@ import com.google.firebase.auth.FirebaseAuth;
 public class SecurityConfig {
 
   private final FirebaseAuth firebaseAuth;
+  private final ApiKeyService apiKeyService;
 
-  public SecurityConfig(FirebaseAuth firebaseAuth) {
+  public SecurityConfig(FirebaseAuth firebaseAuth, ApiKeyService apiKeyService) {
     this.firebaseAuth = firebaseAuth;
+    this.apiKeyService = apiKeyService;
   }
 
   @Bean
@@ -52,9 +57,13 @@ public class SecurityConfig {
                     // All other requests require authentication
                     .anyRequest()
                     .authenticated())
+        // API key filter runs first to handle sfx_ tokens
         .addFilterBefore(
-            new FirebaseAuthenticationFilter(firebaseAuth),
+            new ApiKeyAuthenticationFilter(apiKeyService),
             UsernamePasswordAuthenticationFilter.class)
+        // Firebase filter runs after to handle JWT tokens
+        .addFilterBefore(
+            new FirebaseAuthenticationFilter(firebaseAuth), ApiKeyAuthenticationFilter.class)
         .build();
   }
 
