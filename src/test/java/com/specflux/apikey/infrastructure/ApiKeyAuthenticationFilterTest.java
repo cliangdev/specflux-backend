@@ -48,15 +48,12 @@ class ApiKeyAuthenticationFilterTest extends AbstractIntegrationTest {
         userRepository.save(
             new User("user_filtertest", "fb_filtertest", "filtertest@test.com", "Filter Test"));
 
-    // Create a real API key
     var createResult = apiKeyService.createApiKey(testUser.getId(), "Test Key", null);
     validApiKey = createResult.fullKey();
   }
 
   @Test
   void authenticatedRequest_withValidApiKey_shouldSucceed() throws Exception {
-    // Send request with actual API key in Authorization header
-    // This tests the REAL filter chain, not mocked auth
     mockMvc
         .perform(get("/api/projects").header("Authorization", "Bearer " + validApiKey))
         .andExpect(status().isOk());
@@ -71,7 +68,6 @@ class ApiKeyAuthenticationFilterTest extends AbstractIntegrationTest {
 
   @Test
   void authenticatedRequest_withRevokedApiKey_shouldReturn401() throws Exception {
-    // Revoke the key
     var apiKey = apiKeyRepository.findByUserId(testUser.getId()).get(0);
     apiKeyService.revokeKey(apiKey.getPublicId(), testUser.getId());
 
@@ -82,14 +78,12 @@ class ApiKeyAuthenticationFilterTest extends AbstractIntegrationTest {
 
   @Test
   void authenticatedRequest_withExpiredApiKey_shouldReturn401() throws Exception {
-    // Create an expired key
     var expiredResult =
         apiKeyService.createApiKey(
             testUser.getId(), "Expired Key", java.time.Instant.now().minusSeconds(3600));
-    String expiredKey = expiredResult.fullKey();
 
     mockMvc
-        .perform(get("/api/projects").header("Authorization", "Bearer " + expiredKey))
+        .perform(get("/api/projects").header("Authorization", "Bearer " + expiredResult.fullKey()))
         .andExpect(status().isUnauthorized());
   }
 
@@ -100,9 +94,18 @@ class ApiKeyAuthenticationFilterTest extends AbstractIntegrationTest {
 
   @Test
   void authenticatedRequest_withMalformedToken_shouldReturn403() throws Exception {
-    // Non-sfx token that's also not a valid Firebase JWT should fail
     mockMvc
         .perform(get("/api/projects").header("Authorization", "Bearer not_a_valid_token"))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void publicEndpoint_actuator_shouldNotRequireAuth() throws Exception {
+    mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
+  }
+
+  @Test
+  void publicEndpoint_swagger_shouldNotRequireAuth() throws Exception {
+    mockMvc.perform(get("/swagger-ui.html")).andExpect(status().is3xxRedirection());
   }
 }
