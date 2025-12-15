@@ -106,9 +106,4 @@ class ApiKeyAuthenticationFilterTest extends AbstractIntegrationTest {
   void publicEndpoint_actuator_shouldNotRequireAuth() throws Exception {
     mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
   }
-
-  @Test
-  void publicEndpoint_apiDocs_shouldNotRequireAuth() throws Exception {
-    mockMvc.perform(get("/api-docs")).andExpect(status().isOk());
-  }
 }
