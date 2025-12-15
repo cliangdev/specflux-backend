@@ -47,7 +47,6 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
       String token = authHeader.substring(BEARER_PREFIX.length());
 
-      // Only handle API keys (tokens starting with sfx_)
       if (ApiKeyService.isApiKey(token)) {
         try {
           var userOpt = apiKeyService.validateKey(token);
@@ -55,7 +54,6 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
           if (userOpt.isPresent()) {
             User user = userOpt.get();
 
-            // Create a principal compatible with existing code
             FirebasePrincipal principal =
                 new FirebasePrincipal(
                     user.getFirebaseUid(), user.getEmail(), user.getDisplayName(), null);
@@ -67,7 +65,6 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
             log.debug("Successfully authenticated user via API key: {}", user.getPublicId());
           } else {
-            // Invalid API key - return 401
             log.warn("Invalid or expired API key");
             SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -90,7 +87,6 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
           return;
         }
       }
-      // If not an API key, let Firebase filter handle it
     }
 
     filterChain.doFilter(request, response);

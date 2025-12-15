@@ -40,6 +40,12 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
 
+    // Skip if already authenticated (e.g., by API key filter)
+    if (SecurityContextHolder.getContext().getAuthentication() != null) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+
     String authHeader = request.getHeader(AUTHORIZATION_HEADER);
 
     if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {

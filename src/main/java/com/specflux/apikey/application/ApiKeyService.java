@@ -99,7 +99,7 @@ public class ApiKeyService {
     }
 
     String keyPrefix = extractPrefix(fullKey);
-    Optional<ApiKey> apiKeyOpt = apiKeyRepository.findByKeyPrefix(keyPrefix);
+    Optional<ApiKey> apiKeyOpt = apiKeyRepository.findByKeyPrefixWithUser(keyPrefix);
 
     if (apiKeyOpt.isEmpty()) {
       log.debug("API key not found for prefix: {}", keyPrefix);

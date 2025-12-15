@@ -57,13 +57,13 @@ public class SecurityConfig {
                     // All other requests require authentication
                     .anyRequest()
                     .authenticated())
-        // API key filter runs first to handle sfx_ tokens
+        // Firebase filter added first, then API key filter added before it
+        // This ensures order: ApiKey -> Firebase -> UsernamePassword
         .addFilterBefore(
-            new ApiKeyAuthenticationFilter(apiKeyService),
+            new FirebaseAuthenticationFilter(firebaseAuth),
             UsernamePasswordAuthenticationFilter.class)
-        // Firebase filter runs after to handle JWT tokens
         .addFilterBefore(
-            new FirebaseAuthenticationFilter(firebaseAuth), ApiKeyAuthenticationFilter.class)
+            new ApiKeyAuthenticationFilter(apiKeyService), FirebaseAuthenticationFilter.class)
         .build();
   }
 

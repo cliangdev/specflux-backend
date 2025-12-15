@@ -19,6 +19,18 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
   Optional<ApiKey> findByKeyPrefix(String keyPrefix);
 
   /**
+   * Finds an API key by its prefix with the user eagerly fetched.
+   *
+   * <p>Use this method for authentication to avoid LazyInitializationException when accessing the
+   * user outside a transaction.
+   *
+   * @param keyPrefix the key prefix (first 12 chars after sfx_)
+   * @return the API key with user if found
+   */
+  @Query("SELECT k FROM ApiKey k JOIN FETCH k.user WHERE k.keyPrefix = :keyPrefix")
+  Optional<ApiKey> findByKeyPrefixWithUser(@Param("keyPrefix") String keyPrefix);
+
+  /**
    * Finds an API key by its public ID.
    *
    * @param publicId the public identifier (key_xxx format)
