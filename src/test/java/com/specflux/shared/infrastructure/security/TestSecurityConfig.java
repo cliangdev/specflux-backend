@@ -7,6 +7,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.specflux.apikey.application.ApiKeyService;
+import com.specflux.apikey.infrastructure.ApiKeyAuthenticationFilter;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Test security configuration that enforces authentication without requiring Firebase.
@@ -14,14 +20,20 @@ import org.springframework.security.web.SecurityFilterChain;
  * <p>This configuration is activated when firebase.enabled=false, allowing tests to run without
  * Firebase credentials while still enforcing authentication.
  *
- * <p>Tests should use {@code .with(SecurityMockMvcRequestPostProcessors.user("user"))} to simulate
- * authenticated requests. This works reliably with Spring Security 7.0, unlike @WithMockUser which
- * has issues with the SecurityContextHolderFilter overwriting the mock context.
+ * <p>Tests can use either:
+ *
+ * <ul>
+ *   <li>{@code .with(SecurityMockMvcRequestPostProcessors.user("user"))} for mock authentication
+ *   <li>API key header {@code Authorization: Bearer sfx_...} for real API key authentication
+ * </ul>
  */
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "firebase.enabled", havingValue = "false")
 public class TestSecurityConfig {
+
+  private final ApiKeyService apiKeyService;
 
   @Bean
   public SecurityFilterChain testSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -40,6 +52,10 @@ public class TestSecurityConfig {
                     // All other requests require authentication
                     .anyRequest()
                     .authenticated())
+        // API key filter for sfx_ tokens (also works in tests)
+        .addFilterBefore(
+            new ApiKeyAuthenticationFilter(apiKeyService),
+            UsernamePasswordAuthenticationFilter.class)
         .build();
   }
 }

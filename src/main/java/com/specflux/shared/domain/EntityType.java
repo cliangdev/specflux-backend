@@ -6,7 +6,8 @@ public enum EntityType {
   PROJECT("proj"),
   EPIC("epic"),
   TASK("task"),
-  RELEASE("rel");
+  RELEASE("rel"),
+  API_KEY("key");
 
   private final String prefix;
 

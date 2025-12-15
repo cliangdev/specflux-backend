@@ -18,7 +18,7 @@ public final class PublicId extends ValueObject {
   private static final int MAX_LENGTH = 24;
   private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
   private static final Pattern VALID_PATTERN =
-      Pattern.compile("^(user|proj|epic|task|rel)_[a-z0-9]+$");
+      Pattern.compile("^(user|proj|epic|task|rel|key)_[a-z0-9]+$");
   private static final SecureRandom RANDOM = new SecureRandom();
 
   private final String value;
