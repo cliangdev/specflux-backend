@@ -236,4 +236,86 @@ class ApiKeyControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.name").value("New Key"));
   }
+
+  // ===== API Key Authentication Tests =====
+
+  @Test
+  void apiKeyAuth_validKey_shouldAuthenticate() throws Exception {
+    // Create an API key
+    var result = apiKeyService.createApiKey(testUser.getId(), "Auth Test Key", null);
+    String fullKey = result.fullKey();
+
+    // Use the API key to authenticate (no .with(user()) - using actual API key auth)
+    mockMvc
+        .perform(get("/api/users/me/api-keys").header("Authorization", "Bearer " + fullKey))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].name").value("Auth Test Key"));
+  }
+
+  @Test
+  void apiKeyAuth_invalidKey_shouldReturn401() throws Exception {
+    // Use a fake API key - returns 401 Unauthorized
+    mockMvc
+        .perform(
+            get("/api/users/me/api-keys")
+                .header("Authorization", "Bearer sfx_invalidkeyvalue123456789012345678901234"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void apiKeyAuth_revokedKey_shouldReturn401() throws Exception {
+    // Create and revoke an API key
+    var result = apiKeyService.createApiKey(testUser.getId(), "Revoked Key", null);
+    String fullKey = result.fullKey();
+    apiKeyService.revokeKey(result.apiKey().getPublicId(), testUser.getId());
+
+    // Try to use the revoked key - returns 401 Unauthorized
+    mockMvc
+        .perform(get("/api/users/me/api-keys").header("Authorization", "Bearer " + fullKey))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void apiKeyAuth_expiredKey_shouldReturn401() throws Exception {
+    // Create an API key that expired in the past
+    var result =
+        apiKeyService.createApiKey(
+            testUser.getId(), "Expired Key", java.time.Instant.now().minusSeconds(3600));
+    String fullKey = result.fullKey();
+
+    // Try to use the expired key - returns 401 Unauthorized
+    mockMvc
+        .perform(get("/api/users/me/api-keys").header("Authorization", "Bearer " + fullKey))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void apiKeyAuth_wrongPrefix_shouldReturn403() throws Exception {
+    // Use a key with wrong prefix - not an API key, so falls through to 403 Forbidden
+    mockMvc
+        .perform(
+            get("/api/users/me/api-keys").header("Authorization", "Bearer wrong_prefix_key_here"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void apiKeyAuth_canPerformActions_asAuthenticatedUser() throws Exception {
+    // Create an API key
+    var result = apiKeyService.createApiKey(testUser.getId(), "Action Test Key", null);
+    String fullKey = result.fullKey();
+
+    // Use the API key to revoke itself (verifies user context is properly set)
+    mockMvc
+        .perform(
+            delete("/api/users/me/api-keys/{id}", result.apiKey().getPublicId())
+                .header("Authorization", "Bearer " + fullKey))
+        .andExpect(status().isNoContent());
+
+    // Verify the key is actually revoked
+    ApiKey revokedKey =
+        apiKeyRepository.findByPublicId(result.apiKey().getPublicId()).orElseThrow();
+    assert revokedKey.isRevoked();
+  }
 }
