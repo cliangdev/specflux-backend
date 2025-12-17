@@ -30,6 +30,7 @@ public class User extends AggregateRoot<Long> {
   @Column(name = "public_id", nullable = false, unique = true, length = 24)
   private String publicId;
 
+  @Setter
   @Column(name = "firebase_uid", nullable = false, unique = true, length = 128)
   private String firebaseUid;
 
