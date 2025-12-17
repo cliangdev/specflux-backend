@@ -176,28 +176,41 @@ public class CurrentUserService {
   private User createUserFromPrincipal(FirebasePrincipal principal) {
     return transactionTemplate.execute(
         status -> {
-          // Double-check in transaction to handle race conditions
-          return userRepository
-              .findByFirebaseUid(principal.getFirebaseUid())
-              .orElseGet(
-                  () -> {
-                    String publicId =
-                        "usr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-                    String displayName =
-                        principal.getDisplayName() != null
-                            ? principal.getDisplayName()
-                            : principal.getEmail();
+          // First check if user exists by Firebase UID
+          var existingByUid = userRepository.findByFirebaseUid(principal.getFirebaseUid());
+          if (existingByUid.isPresent()) {
+            return existingByUid.get();
+          }
 
-                    User newUser =
-                        new User(
-                            publicId,
-                            principal.getFirebaseUid(),
-                            principal.getEmail(),
-                            displayName);
-                    newUser.setAvatarUrl(principal.getPictureUrl());
+          // Check if user exists by email (handles account linking scenario)
+          // e.g., user signed up with email, then tries GitHub with same email
+          String email = principal.getEmail();
+          if (email != null) {
+            var existingByEmail = userRepository.findByEmail(email);
+            if (existingByEmail.isPresent()) {
+              User user = existingByEmail.get();
+              // Link the new Firebase UID to the existing account
+              user.setFirebaseUid(principal.getFirebaseUid());
+              // Update display name and avatar if provided
+              if (principal.getDisplayName() != null) {
+                user.setDisplayName(principal.getDisplayName());
+              }
+              if (principal.getPictureUrl() != null) {
+                user.setAvatarUrl(principal.getPictureUrl());
+              }
+              return userRepository.save(user);
+            }
+          }
 
-                    return userRepository.save(newUser);
-                  });
+          // No existing user found, create new one
+          String publicId = "usr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+          String displayName =
+              principal.getDisplayName() != null ? principal.getDisplayName() : email;
+
+          User newUser = new User(publicId, principal.getFirebaseUid(), email, displayName);
+          newUser.setAvatarUrl(principal.getPictureUrl());
+
+          return userRepository.save(newUser);
         });
   }
 }
