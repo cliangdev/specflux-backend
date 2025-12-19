@@ -758,4 +758,67 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(jsonPath("$.documents[1].documentType").value("MOCKUP"))
         .andExpect(jsonPath("$.documentCount").value(2));
   }
+
+  // ==================== EMPTY-STRING-CLEARS CONVENTION TESTS ====================
+
+  @Test
+  void updatePrd_emptyString_shouldClearDescription() throws Exception {
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_clearDesc", testProject, 1, "PRDT-P1", "Clear Desc", "/prd/path", testUser));
+    prd.setDescription("Original description");
+    prdRepository.save(prd);
+
+    // Send empty string to clear description
+    UpdatePrdRequestDto request = new UpdatePrdRequestDto();
+    request.setDescription("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/prds/{prdRef}",
+                    testProject.getPublicId(),
+                    "prd_clearDesc")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updatePrd_nullField_shouldNotChangeValue() throws Exception {
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_nullNoChange",
+                testProject,
+                1,
+                "PRDT-P2",
+                "Null No Change",
+                "/prd/path",
+                testUser));
+    prd.setDescription("Original description");
+    prd.setStatus(PrdStatus.IN_REVIEW);
+    prdRepository.save(prd);
+
+    // Send request with only title - other fields should remain unchanged
+    UpdatePrdRequestDto request = new UpdatePrdRequestDto();
+    request.setTitle("Updated Title");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/prds/{prdRef}",
+                    testProject.getPublicId(),
+                    "prd_nullNoChange")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Updated Title"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.status").value("IN_REVIEW"));
+  }
 }

@@ -249,4 +249,78 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
   }
+
+  // ==================== EMPTY-STRING-CLEARS CONVENTION TESTS ====================
+
+  @Test
+  void updateProject_emptyString_shouldClearDescription() throws Exception {
+    Project project =
+        projectRepository.save(
+            new Project("proj_clearDesc", "CLRD", "Clear Desc Project", testUser));
+    project.setDescription("Original description");
+    projectRepository.save(project);
+    projectMemberRepository.save(ProjectMember.createOwner(project, testUser));
+
+    // Send empty string to clear description
+    UpdateProjectRequestDto request = new UpdateProjectRequestDto();
+    request.setDescription("");
+
+    mockMvc
+        .perform(
+            put("/api/projects/{projectRef}", project.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updateProject_emptyString_shouldClearLocalPath() throws Exception {
+    Project project =
+        projectRepository.save(
+            new Project("proj_clearPath", "CLRP", "Clear Path Project", testUser));
+    project.setLocalPath("/original/path");
+    projectRepository.save(project);
+    projectMemberRepository.save(ProjectMember.createOwner(project, testUser));
+
+    // Send empty string to clear localPath
+    UpdateProjectRequestDto request = new UpdateProjectRequestDto();
+    request.setLocalPath("");
+
+    mockMvc
+        .perform(
+            put("/api/projects/{projectRef}", project.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.localPath").doesNotExist());
+  }
+
+  @Test
+  void updateProject_nullField_shouldNotChangeValue() throws Exception {
+    Project project =
+        projectRepository.save(
+            new Project("proj_nullNoChange", "NULL", "Null No Change Project", testUser));
+    project.setDescription("Original description");
+    project.setLocalPath("/original/path");
+    projectRepository.save(project);
+    projectMemberRepository.save(ProjectMember.createOwner(project, testUser));
+
+    // Send request with only name - other fields should remain unchanged
+    UpdateProjectRequestDto request = new UpdateProjectRequestDto();
+    request.setName("Updated Name");
+
+    mockMvc
+        .perform(
+            put("/api/projects/{projectRef}", project.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Updated Name"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.localPath").value("/original/path"));
+  }
 }

@@ -437,4 +437,59 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(jsonPath("$.epics[0].tasks").isArray())
         .andExpect(jsonPath("$.epics[0].tasks.length()").value(2));
   }
+
+  // ==================== EMPTY-STRING-CLEARS CONVENTION TESTS ====================
+
+  @Test
+  void updateRelease_emptyString_shouldClearDescription() throws Exception {
+    Release release =
+        releaseRepository.save(
+            new Release("rel_clearDesc", testProject, 1, "REL-R1", "Clear Desc"));
+    release.setDescription("Original description");
+    releaseRepository.save(release);
+
+    // Send empty string to clear description
+    UpdateReleaseRequestDto request = new UpdateReleaseRequestDto();
+    request.setDescription("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
+                    testProject.getPublicId(),
+                    "rel_clearDesc")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updateRelease_nullField_shouldNotChangeValue() throws Exception {
+    Release release =
+        releaseRepository.save(
+            new Release("rel_nullNoChange", testProject, 1, "REL-R1", "Null No Change"));
+    release.setDescription("Original description");
+    release.setStatus(ReleaseStatus.IN_PROGRESS);
+    releaseRepository.save(release);
+
+    // Send request with only name - other fields should remain unchanged
+    UpdateReleaseRequestDto request = new UpdateReleaseRequestDto();
+    request.setName("Updated Name");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/releases/{releaseRef}",
+                    testProject.getPublicId(),
+                    "rel_nullNoChange")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Updated Name"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+  }
 }

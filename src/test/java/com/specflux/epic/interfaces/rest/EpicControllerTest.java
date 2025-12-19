@@ -890,4 +890,154 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
                 "epic_123"))
         .andExpect(status().isForbidden());
   }
+
+  // ==================== EMPTY-STRING-CLEARS CONVENTION TESTS ====================
+
+  @Test
+  void updateEpic_emptyString_shouldClearDescription() throws Exception {
+    Epic epic = new Epic("epic_clearDesc", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setDescription("Original description");
+    epicRepository.save(epic);
+
+    // Send empty string to clear description
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
+    request.setDescription("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_clearDesc")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_emptyString_shouldClearNotes() throws Exception {
+    Epic epic = new Epic("epic_clearNotes", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setNotes("Original notes");
+    epicRepository.save(epic);
+
+    // Send empty string to clear notes
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
+    request.setNotes("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_clearNotes")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.notes").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_emptyString_shouldClearReleaseRef() throws Exception {
+    // Create release and epic with release assignment
+    Release release =
+        releaseRepository.save(new Release("rel_clearTest", testProject, 1, "EPIC-R1", "v1.0"));
+    Epic epic = new Epic("epic_clearRel", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setReleaseId(release.getId());
+    epicRepository.save(epic);
+
+    // Verify release is set
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_clearRel")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.releaseId").value(release.getPublicId()));
+
+    // Send empty string to clear release
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
+    request.setReleaseRef("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_clearRel")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.releaseId").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_emptyString_shouldClearPrdRef() throws Exception {
+    // Create PRD and epic with PRD assignment
+    Prd prd =
+        prdRepository.save(
+            new Prd("prd_clearTest", testProject, 1, "EPIC-P1", "Test PRD", "/prd/path", testUser));
+    Epic epic = new Epic("epic_clearPrd", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setPrdId(prd.getId());
+    epicRepository.save(epic);
+
+    // Verify PRD is set
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_clearPrd")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.prdId").value(prd.getPublicId()));
+
+    // Send empty string to clear PRD
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
+    request.setPrdRef("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_clearPrd")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.prdId").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_nullField_shouldNotChangeValue() throws Exception {
+    Epic epic = new Epic("epic_nullNoChange", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setDescription("Original description");
+    epic.setNotes("Original notes");
+    epicRepository.save(epic);
+
+    // Send request with only title - other fields should remain unchanged
+    UpdateEpicRequestDto request = new UpdateEpicRequestDto();
+    request.setTitle("Updated Title");
+    // description and notes are null (not set)
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_nullNoChange")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Updated Title"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.notes").value("Original notes"));
+  }
 }
