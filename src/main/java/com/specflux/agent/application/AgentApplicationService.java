@@ -14,6 +14,7 @@ import com.specflux.api.generated.model.AgentListResponseDto;
 import com.specflux.api.generated.model.CreateAgentRequestDto;
 import com.specflux.api.generated.model.UpdateAgentRequestDto;
 import com.specflux.project.domain.Project;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceConflictException;
 import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceNotFoundException;
 import com.specflux.shared.interfaces.rest.RefResolver;
@@ -69,15 +70,9 @@ public class AgentApplicationService {
     refResolver.resolveProject(projectRef);
     Agent agent = resolveAgent(agentRef);
 
-    if (request.getName() != null) {
-      agent.setName(request.getName());
-    }
-    if (request.getDescription() != null) {
-      agent.setDescription(request.getDescription());
-    }
-    if (request.getFilePath() != null) {
-      agent.setFilePath(request.getFilePath());
-    }
+    UpdateHelper.applyValue(request.getName(), agent::setName);
+    UpdateHelper.applyString(request.getDescription(), agent::setDescription);
+    UpdateHelper.applyValue(request.getFilePath(), agent::setFilePath);
 
     Agent saved = transactionTemplate.execute(status -> agentRepository.save(agent));
     return AgentMapper.toDto(saved);

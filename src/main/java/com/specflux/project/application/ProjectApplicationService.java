@@ -22,6 +22,7 @@ import com.specflux.project.domain.ProjectMemberRepository;
 import com.specflux.project.domain.ProjectRepository;
 import com.specflux.project.interfaces.rest.ProjectMapper;
 import com.specflux.shared.application.CurrentUserService;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceConflictException;
 import com.specflux.shared.interfaces.rest.RefResolver;
 import com.specflux.user.domain.User;
@@ -94,15 +95,9 @@ public class ProjectApplicationService {
   public ProjectDto updateProject(String ref, UpdateProjectRequestDto request) {
     Project project = refResolver.resolveProject(ref);
 
-    if (request.getName() != null) {
-      project.setName(request.getName());
-    }
-    if (request.getDescription() != null) {
-      project.setDescription(request.getDescription());
-    }
-    if (request.getLocalPath() != null) {
-      project.setLocalPath(request.getLocalPath());
-    }
+    UpdateHelper.applyValue(request.getName(), project::setName);
+    UpdateHelper.applyString(request.getDescription(), project::setDescription);
+    UpdateHelper.applyString(request.getLocalPath(), project::setLocalPath);
 
     Project saved = transactionTemplate.execute(status -> projectRepository.save(project));
     return ProjectMapper.toDto(saved);

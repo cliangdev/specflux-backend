@@ -27,6 +27,7 @@ import com.specflux.prd.domain.PrdRepository;
 import com.specflux.prd.interfaces.rest.PrdMapper;
 import com.specflux.project.domain.Project;
 import com.specflux.shared.application.CurrentUserService;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.RefResolver;
 import com.specflux.user.domain.User;
 
@@ -113,15 +114,9 @@ public class PrdApplicationService {
     Project project = refResolver.resolveProject(projectRef);
     Prd prd = resolvePrd(project, prdRef);
 
-    if (request.getTitle() != null) {
-      prd.setTitle(request.getTitle());
-    }
-    if (request.getDescription() != null) {
-      prd.setDescription(request.getDescription());
-    }
-    if (request.getStatus() != null) {
-      prd.setStatus(prdMapper.toDomainStatus(request.getStatus()));
-    }
+    UpdateHelper.applyValue(request.getTitle(), prd::setTitle);
+    UpdateHelper.applyString(request.getDescription(), prd::setDescription);
+    UpdateHelper.applyValue(request.getStatus(), s -> prd.setStatus(prdMapper.toDomainStatus(s)));
 
     Prd saved = transactionTemplate.execute(s -> prdRepository.save(prd));
     return prdMapper.toDto(saved);

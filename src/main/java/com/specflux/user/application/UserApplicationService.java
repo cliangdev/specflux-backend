@@ -6,6 +6,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.specflux.api.generated.model.UpdateUserRequestDto;
 import com.specflux.api.generated.model.UserDto;
 import com.specflux.shared.application.CurrentUserService;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.user.domain.User;
 import com.specflux.user.domain.UserRepository;
 import com.specflux.user.interfaces.rest.UserMapper;
@@ -43,12 +44,8 @@ public class UserApplicationService {
         status -> {
           User user = currentUserService.getOrCreateCurrentUser();
 
-          if (request.getDisplayName() != null) {
-            user.setDisplayName(request.getDisplayName());
-          }
-          if (request.getAvatarUrl() != null) {
-            user.setAvatarUrl(request.getAvatarUrl());
-          }
+          UpdateHelper.applyString(request.getDisplayName(), user::setDisplayName);
+          UpdateHelper.applyString(request.getAvatarUrl(), user::setAvatarUrl);
 
           User saved = userRepository.save(user);
           return UserMapper.toDto(saved);

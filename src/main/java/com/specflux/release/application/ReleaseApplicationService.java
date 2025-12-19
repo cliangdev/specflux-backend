@@ -27,6 +27,7 @@ import com.specflux.project.domain.Project;
 import com.specflux.release.domain.Release;
 import com.specflux.release.domain.ReleaseRepository;
 import com.specflux.release.interfaces.rest.ReleaseMapper;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.RefResolver;
 
 import lombok.RequiredArgsConstructor;
@@ -109,18 +110,11 @@ public class ReleaseApplicationService {
     Project project = refResolver.resolveProject(projectRef);
     Release release = refResolver.resolveRelease(project, releaseRef);
 
-    if (request.getName() != null) {
-      release.setName(request.getName());
-    }
-    if (request.getDescription() != null) {
-      release.setDescription(request.getDescription());
-    }
-    if (request.getStatus() != null) {
-      release.setStatus(ReleaseMapper.toDomainStatus(request.getStatus()));
-    }
-    if (request.getTargetDate() != null) {
-      release.setTargetDate(request.getTargetDate());
-    }
+    UpdateHelper.applyValue(request.getName(), release::setName);
+    UpdateHelper.applyString(request.getDescription(), release::setDescription);
+    UpdateHelper.applyValue(
+        request.getStatus(), s -> release.setStatus(ReleaseMapper.toDomainStatus(s)));
+    UpdateHelper.applyValue(request.getTargetDate(), release::setTargetDate);
 
     Release saved = transactionTemplate.execute(status -> releaseRepository.save(release));
     return releaseMapper.toDto(saved);

@@ -14,6 +14,7 @@ import com.specflux.project.domain.Project;
 import com.specflux.repository.domain.Repository;
 import com.specflux.repository.domain.RepositoryRepository;
 import com.specflux.repository.interfaces.rest.RepositoryMapper;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceConflictException;
 import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceNotFoundException;
 import com.specflux.shared.interfaces.rest.RefResolver;
@@ -70,15 +71,9 @@ public class RepositoryApplicationService {
     refResolver.resolveProject(projectRef);
     Repository repository = resolveRepository(repoRef);
 
-    if (request.getName() != null) {
-      repository.setName(request.getName());
-    }
-    if (request.getGitUrl() != null) {
-      repository.setGitUrl(request.getGitUrl());
-    }
-    if (request.getDefaultBranch() != null) {
-      repository.setDefaultBranch(request.getDefaultBranch());
-    }
+    UpdateHelper.applyValue(request.getName(), repository::setName);
+    UpdateHelper.applyString(request.getGitUrl(), repository::setGitUrl);
+    UpdateHelper.applyValue(request.getDefaultBranch(), repository::setDefaultBranch);
     if (request.getStatus() != null) {
       repository.setStatus(Repository.Status.valueOf(request.getStatus().name()));
     }
