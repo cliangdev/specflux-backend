@@ -21,7 +21,7 @@
         <java.version>25</java.version>
         <lombok.version>1.18.42</lombok.version>
         <springdoc.version>3.0.0</springdoc.version>
-        <openapi-generator.version>7.17.0</openapi-generator.version>
+        <openapi-generator.version>7.2.0</openapi-generator.version>
         <spotless.version>3.1.0</spotless.version>
         <testcontainers.version>2.0.2</testcontainers.version>
     </properties>
@@ -31,6 +31,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <!-- Exclude Jackson 3 to use Jackson 2 for jackson-databind-nullable compatibility -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-jackson</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Jackson 2 support for JSON Merge Patch (jackson-databind-nullable uses Jackson 2) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -58,6 +70,13 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
+            <!-- Exclude Jackson 3 to use Jackson 2 for jackson-databind-nullable compatibility -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-jackson</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Swagger annotations for generated API code -->
@@ -67,11 +86,25 @@
             <version>2.2.41</version>
         </dependency>
 
+        <!-- Jackson Nullable for JSON Merge Patch (RFC 7396) support -->
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>jackson-databind-nullable</artifactId>
+            <version>0.2.6</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+            <!-- Exclude Jackson 3 to use Jackson 2 for jackson-databind-nullable compatibility -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-jackson-test</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -224,7 +257,7 @@
                                 <interfaceOnly>true</interfaceOnly>
                                 <useSpringBoot3>true</useSpringBoot3>
                                 <useTags>true</useTags>
-                                <openApiNullable>false</openApiNullable>
+                                <openApiNullable>true</openApiNullable>
                                 <useJakartaEe>true</useJakartaEe>
                                 <documentationProvider>none</documentationProvider>
                                 <serializationLibrary>jackson</serializationLibrary>

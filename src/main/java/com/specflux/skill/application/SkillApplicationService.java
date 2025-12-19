@@ -48,11 +48,11 @@ public class SkillApplicationService {
     String publicId = generatePublicId("skill");
     Skill skill = new Skill(publicId, project, request.getName());
 
-    if (request.getDescription() != null) {
-      skill.setDescription(request.getDescription());
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      skill.setDescription(request.getDescription().get());
     }
-    if (request.getFolderPath() != null) {
-      skill.setFolderPath(request.getFolderPath());
+    if (request.getFolderPath() != null && request.getFolderPath().isPresent()) {
+      skill.setFolderPath(request.getFolderPath().get());
     }
 
     Skill saved = transactionTemplate.execute(status -> skillRepository.save(skill));
@@ -72,11 +72,11 @@ public class SkillApplicationService {
     if (request.getName() != null) {
       skill.setName(request.getName());
     }
-    if (request.getDescription() != null) {
-      skill.setDescription(request.getDescription());
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      skill.setDescription(request.getDescription().get());
     }
-    if (request.getFolderPath() != null) {
-      skill.setFolderPath(request.getFolderPath());
+    if (request.getFolderPath() != null && request.getFolderPath().isPresent()) {
+      skill.setFolderPath(request.getFolderPath().get());
     }
 
     Skill saved = transactionTemplate.execute(status -> skillRepository.save(skill));

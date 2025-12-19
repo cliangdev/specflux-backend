@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.stereotype.Service;
 
 import com.specflux.api.generated.model.EpicDto;
@@ -46,27 +47,30 @@ public class EpicMapper {
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
-    dto.setDescription(domain.getDescription());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
     dto.setStatus(toApiStatus(domain.getStatus()));
-    dto.setTargetDate(domain.getTargetDate());
+    dto.setTargetDate(JsonNullable.of(domain.getTargetDate()));
     dto.setCreatedById(domain.getCreatedBy().getPublicId());
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
 
     // PRD reference
     if (domain.getPrdId() != null) {
-      prdRepository.findById(domain.getPrdId()).map(Prd::getPublicId).ifPresent(dto::setPrdId);
+      prdRepository
+          .findById(domain.getPrdId())
+          .map(Prd::getPublicId)
+          .ifPresent(prdId -> dto.setPrdId(JsonNullable.of(prdId)));
     }
-    dto.setPrdFilePath(domain.getPrdFilePath());
-    dto.setEpicFilePath(domain.getEpicFilePath());
-    dto.setNotes(domain.getNotes());
+    dto.setPrdFilePath(JsonNullable.of(domain.getPrdFilePath()));
+    dto.setEpicFilePath(JsonNullable.of(domain.getEpicFilePath()));
+    dto.setNotes(JsonNullable.of(domain.getNotes()));
 
     // Release ID (public ID of the release)
     if (domain.getReleaseId() != null) {
       releaseRepository
           .findById(domain.getReleaseId())
           .map(Release::getPublicId)
-          .ifPresent(dto::setReleaseId);
+          .ifPresent(releaseId -> dto.setReleaseId(JsonNullable.of(releaseId)));
     }
 
     // Compute task stats
@@ -104,27 +108,30 @@ public class EpicMapper {
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
-    dto.setDescription(domain.getDescription());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
     dto.setStatus(toApiStatus(domain.getStatus()));
-    dto.setTargetDate(domain.getTargetDate());
+    dto.setTargetDate(JsonNullable.of(domain.getTargetDate()));
     dto.setCreatedById(domain.getCreatedBy().getPublicId());
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
 
     // PRD reference
     if (domain.getPrdId() != null) {
-      prdRepository.findById(domain.getPrdId()).map(Prd::getPublicId).ifPresent(dto::setPrdId);
+      prdRepository
+          .findById(domain.getPrdId())
+          .map(Prd::getPublicId)
+          .ifPresent(prdId -> dto.setPrdId(JsonNullable.of(prdId)));
     }
-    dto.setPrdFilePath(domain.getPrdFilePath());
-    dto.setEpicFilePath(domain.getEpicFilePath());
-    dto.setNotes(domain.getNotes());
+    dto.setPrdFilePath(JsonNullable.of(domain.getPrdFilePath()));
+    dto.setEpicFilePath(JsonNullable.of(domain.getEpicFilePath()));
+    dto.setNotes(JsonNullable.of(domain.getNotes()));
 
     // Set release ID if present
     if (domain.getReleaseId() != null) {
       releaseRepository
           .findById(domain.getReleaseId())
           .map(Release::getPublicId)
-          .ifPresent(dto::setReleaseId);
+          .ifPresent(releaseId -> dto.setReleaseId(JsonNullable.of(releaseId)));
     }
 
     // Compute task stats

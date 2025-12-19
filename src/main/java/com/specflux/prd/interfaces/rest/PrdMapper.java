@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.stereotype.Service;
 
 import com.specflux.api.generated.model.PrdDocumentDto;
@@ -35,7 +36,7 @@ public class PrdMapper {
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
-    dto.setDescription(domain.getDescription());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
     dto.setFolderPath(domain.getFolderPath());
     dto.setStatus(toApiStatus(domain.getStatus()));
     dto.setCreatedById(domain.getCreatedBy().getPublicId());
@@ -63,7 +64,7 @@ public class PrdMapper {
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
-    dto.setDescription(domain.getDescription());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
     dto.setFolderPath(domain.getFolderPath());
     dto.setStatus(toApiStatus(domain.getStatus()));
     dto.setCreatedById(domain.getCreatedBy().getPublicId());

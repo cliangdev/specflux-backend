@@ -3,6 +3,7 @@ package com.specflux.common;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.openapitools.jackson.nullable.JsonNullableModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,7 +22,7 @@ import com.specflux.user.domain.UserRepository;
  *
  * <ul>
  *   <li>MockMvc for HTTP request testing
- *   <li>ObjectMapper for JSON serialization
+ *   <li>ObjectMapper for JSON serialization (with JsonNullableModule for JSON Merge Patch)
  *   <li>CurrentUserService mock for authentication simulation
  *   <li>Test user setup and management
  * </ul>
@@ -49,7 +50,14 @@ public abstract class AbstractControllerIntegrationTest extends AbstractIntegrat
   @Autowired protected UserRepository userRepository;
   @MockitoBean protected CurrentUserService currentUserService;
 
-  protected final ObjectMapper objectMapper = new ObjectMapper();
+  /** ObjectMapper with JsonNullableModule for proper JSON Merge Patch (RFC 7396) support. */
+  protected static final ObjectMapper objectMapper = createObjectMapper();
+
+  private static ObjectMapper createObjectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(new JsonNullableModule());
+    return mapper;
+  }
 
   protected User testUser;
 

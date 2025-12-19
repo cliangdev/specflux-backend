@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -81,17 +82,25 @@ public class EpicApplicationService {
           Epic epic =
               new Epic(
                   publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
-          epic.setDescription(request.getDescription());
-          epic.setTargetDate(request.getTargetDate());
+
+          if (request.getDescription() != null && request.getDescription().isPresent()) {
+            epic.setDescription(request.getDescription().get());
+          }
+          if (request.getTargetDate() != null && request.getTargetDate().isPresent()) {
+            epic.setTargetDate(request.getTargetDate().get());
+          }
 
           // Handle PRD reference
-          if (request.getPrdRef() != null && !request.getPrdRef().isBlank()) {
-            Prd prd = refResolver.resolvePrd(project, request.getPrdRef());
+          if (request.getPrdRef() != null
+              && request.getPrdRef().isPresent()
+              && request.getPrdRef().get() != null
+              && !request.getPrdRef().get().isBlank()) {
+            Prd prd = refResolver.resolvePrd(project, request.getPrdRef().get());
             epic.setPrdId(prd.getId());
           }
           // Keep prdFilePath for backward compatibility
-          if (request.getPrdFilePath() != null) {
-            epic.setPrdFilePath(request.getPrdFilePath());
+          if (request.getPrdFilePath() != null && request.getPrdFilePath().isPresent()) {
+            epic.setPrdFilePath(request.getPrdFilePath().get());
           }
 
           Epic saved = epicRepository.save(epic);
@@ -123,7 +132,15 @@ public class EpicApplicationService {
   }
 
   /**
-   * Updates an epic.
+   * Updates an epic using JSON Merge Patch semantics (RFC 7396).
+   *
+   * <p>Field handling:
+   *
+   * <ul>
+   *   <li>Field absent in JSON: don't modify (JsonNullable.isPresent() == false)
+   *   <li>Field explicitly null: clear the value (JsonNullable.get() == null)
+   *   <li>Field has value: set the value
+   * </ul>
    *
    * @param projectRef the project reference
    * @param epicRef the epic reference
@@ -134,39 +151,56 @@ public class EpicApplicationService {
     Project project = refResolver.resolveProject(projectRef);
     Epic epic = refResolver.resolveEpic(project, epicRef);
 
+    // Non-nullable field (title) - only update if provided
     if (request.getTitle() != null) {
       epic.setTitle(request.getTitle());
     }
-    if (request.getDescription() != null) {
-      epic.setDescription(request.getDescription());
+
+    // Nullable field (description) - JSON Merge Patch: present means update, null means clear
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      epic.setDescription(request.getDescription().get());
     }
+
+    // Non-nullable enum field (status) - only update if provided
     if (request.getStatus() != null) {
       epic.setStatus(epicMapper.toDomainStatus(request.getStatus()));
     }
-    if (request.getTargetDate() != null) {
-      epic.setTargetDate(request.getTargetDate());
+
+    // Nullable field (targetDate) - JSON Merge Patch
+    if (request.getTargetDate() != null && request.getTargetDate().isPresent()) {
+      epic.setTargetDate(request.getTargetDate().get());
     }
-    if (request.getPrdRef() != null) {
-      if (request.getPrdRef().isBlank()) {
+
+    // Nullable field (prdRef) - JSON Merge Patch: null clears, value sets
+    if (request.getPrdRef() != null && request.getPrdRef().isPresent()) {
+      String prdRefValue = request.getPrdRef().get();
+      if (prdRefValue == null) {
         epic.setPrdId(null);
       } else {
-        Prd prd = refResolver.resolvePrd(project, request.getPrdRef());
+        Prd prd = refResolver.resolvePrd(project, prdRefValue);
         epic.setPrdId(prd.getId());
       }
     }
-    if (request.getPrdFilePath() != null) {
-      epic.setPrdFilePath(request.getPrdFilePath());
+
+    // Nullable field (prdFilePath) - JSON Merge Patch
+    if (request.getPrdFilePath() != null && request.getPrdFilePath().isPresent()) {
+      epic.setPrdFilePath(request.getPrdFilePath().get());
     }
-    if (request.getReleaseRef() != null) {
-      if (request.getReleaseRef().isBlank()) {
+
+    // Nullable field (releaseRef) - JSON Merge Patch: null clears, value sets
+    if (request.getReleaseRef() != null && request.getReleaseRef().isPresent()) {
+      String releaseRefValue = request.getReleaseRef().get();
+      if (releaseRefValue == null) {
         epic.setReleaseId(null);
       } else {
-        Release release = refResolver.resolveRelease(project, request.getReleaseRef());
+        Release release = refResolver.resolveRelease(project, releaseRefValue);
         epic.setReleaseId(release.getId());
       }
     }
-    if (request.getNotes() != null) {
-      epic.setNotes(request.getNotes());
+
+    // Nullable field (notes) - JSON Merge Patch
+    if (request.getNotes() != null && request.getNotes().isPresent()) {
+      epic.setNotes(request.getNotes().get());
     }
 
     Epic saved = transactionTemplate.execute(status -> epicRepository.save(epic));
@@ -269,11 +303,11 @@ public class EpicApplicationService {
 
     if (hasMore) {
       int nextOffset = offset + limit;
-      pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
+      pagination.setNextCursor(JsonNullable.of(encodeCursor(new CursorData(nextOffset))));
     }
     if (offset > 0) {
       int prevOffset = Math.max(0, offset - limit);
-      pagination.setPrevCursor(encodeCursor(new CursorData(prevOffset)));
+      pagination.setPrevCursor(JsonNullable.of(encodeCursor(new CursorData(prevOffset))));
     }
 
     response.setPagination(pagination);
@@ -326,11 +360,11 @@ public class EpicApplicationService {
 
     if (hasMore) {
       int nextOffset = offset + effectiveLimit;
-      pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
+      pagination.setNextCursor(JsonNullable.of(encodeCursor(new CursorData(nextOffset))));
     }
     if (offset > 0) {
       int prevOffset = Math.max(0, offset - effectiveLimit);
-      pagination.setPrevCursor(encodeCursor(new CursorData(prevOffset)));
+      pagination.setPrevCursor(JsonNullable.of(encodeCursor(new CursorData(prevOffset))));
     }
 
     response.setPagination(pagination);

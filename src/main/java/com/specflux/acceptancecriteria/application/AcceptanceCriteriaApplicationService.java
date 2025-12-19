@@ -65,8 +65,8 @@ public class AcceptanceCriteriaApplicationService {
     Task task = refResolver.resolveTask(project, taskRef);
 
     int orderIndex =
-        request.getOrderIndex() != null
-            ? request.getOrderIndex()
+        request.getOrderIndex() != null && request.getOrderIndex().isPresent()
+            ? request.getOrderIndex().get()
             : acceptanceCriteriaRepository.countByTaskId(task.getId());
 
     AcceptanceCriteria ac = new AcceptanceCriteria(task, request.getCriteria(), orderIndex);
@@ -197,8 +197,8 @@ public class AcceptanceCriteriaApplicationService {
     Epic epic = refResolver.resolveEpic(project, epicRef);
 
     int orderIndex =
-        request.getOrderIndex() != null
-            ? request.getOrderIndex()
+        request.getOrderIndex() != null && request.getOrderIndex().isPresent()
+            ? request.getOrderIndex().get()
             : acceptanceCriteriaRepository.countByEpicId(epic.getId());
 
     AcceptanceCriteria ac = new AcceptanceCriteria(epic, request.getCriteria(), orderIndex);

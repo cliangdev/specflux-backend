@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import org.openapitools.jackson.nullable.JsonNullable;
+
 import com.specflux.api.generated.model.ProjectDto;
 import com.specflux.project.domain.Project;
 
@@ -24,8 +26,8 @@ public class ProjectMapper {
     dto.setId(domain.getPublicId());
     dto.setProjectKey(domain.getProjectKey());
     dto.setName(domain.getName());
-    dto.setDescription(domain.getDescription());
-    dto.setLocalPath(domain.getLocalPath());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
+    dto.setLocalPath(JsonNullable.of(domain.getLocalPath()));
     dto.setOwnerId(domain.getOwner().getPublicId());
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));

@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.openapitools.jackson.nullable.JsonNullable;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +28,7 @@ public class McpServerMapper {
     dto.setName(domain.getName());
     dto.setCommand(domain.getCommand());
     dto.setArgs(parseArgs(domain.getArgs(), objectMapper));
-    dto.setEnvVars(parseEnvVars(domain.getEnvVars(), objectMapper));
+    dto.setEnvVars(JsonNullable.of(parseEnvVars(domain.getEnvVars(), objectMapper)));
     dto.setIsActive(domain.getIsActive());
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));

@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -61,8 +62,12 @@ public class ReleaseApplicationService {
 
           Release release =
               new Release(publicId, project, sequenceNumber, displayKey, request.getName());
-          release.setDescription(request.getDescription());
-          release.setTargetDate(request.getTargetDate());
+          if (request.getDescription() != null && request.getDescription().isPresent()) {
+            release.setDescription(request.getDescription().get());
+          }
+          if (request.getTargetDate() != null && request.getTargetDate().isPresent()) {
+            release.setTargetDate(request.getTargetDate().get());
+          }
 
           Release saved = releaseRepository.save(release);
           return releaseMapper.toDto(saved);
@@ -112,14 +117,14 @@ public class ReleaseApplicationService {
     if (request.getName() != null) {
       release.setName(request.getName());
     }
-    if (request.getDescription() != null) {
-      release.setDescription(request.getDescription());
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      release.setDescription(request.getDescription().get());
     }
     if (request.getStatus() != null) {
       release.setStatus(ReleaseMapper.toDomainStatus(request.getStatus()));
     }
-    if (request.getTargetDate() != null) {
-      release.setTargetDate(request.getTargetDate());
+    if (request.getTargetDate() != null && request.getTargetDate().isPresent()) {
+      release.setTargetDate(request.getTargetDate().get());
     }
 
     Release saved = transactionTemplate.execute(status -> releaseRepository.save(release));
@@ -201,11 +206,11 @@ public class ReleaseApplicationService {
 
     if (hasMore) {
       int nextOffset = offset + limit;
-      pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
+      pagination.setNextCursor(JsonNullable.of(encodeCursor(new CursorData(nextOffset))));
     }
     if (offset > 0) {
       int prevOffset = Math.max(0, offset - limit);
-      pagination.setPrevCursor(encodeCursor(new CursorData(prevOffset)));
+      pagination.setPrevCursor(JsonNullable.of(encodeCursor(new CursorData(prevOffset))));
     }
 
     response.setPagination(pagination);

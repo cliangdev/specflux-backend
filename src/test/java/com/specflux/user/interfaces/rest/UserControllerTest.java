@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -76,7 +77,7 @@ class UserControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void updateCurrentUser_avatarUrl_shouldUpdateAndReturn() throws Exception {
     UpdateUserRequestDto request = new UpdateUserRequestDto();
-    request.setAvatarUrl("https://example.com/avatar.png");
+    request.setAvatarUrl(JsonNullable.of("https://example.com/avatar.png"));
 
     mockMvc
         .perform(

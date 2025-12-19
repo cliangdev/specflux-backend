@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import org.openapitools.jackson.nullable.JsonNullable;
+
 import com.specflux.api.generated.model.SkillDto;
 import com.specflux.skill.domain.Skill;
 
@@ -18,8 +20,8 @@ public class SkillMapper {
     dto.setId(domain.getPublicId());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setName(domain.getName());
-    dto.setDescription(domain.getDescription());
-    dto.setFolderPath(domain.getFolderPath());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
+    dto.setFolderPath(JsonNullable.of(domain.getFolderPath()));
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
     return dto;

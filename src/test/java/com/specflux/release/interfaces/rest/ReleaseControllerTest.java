@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -55,7 +56,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
   void createRelease_shouldReturnCreatedRelease() throws Exception {
     CreateReleaseRequestDto request = new CreateReleaseRequestDto();
     request.setName("v1.0.0");
-    request.setDescription("Initial release");
+    request.setDescription(JsonNullable.of("Initial release"));
 
     mockMvc
         .perform(
@@ -160,7 +161,7 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
 
     UpdateReleaseRequestDto request = new UpdateReleaseRequestDto();
     request.setName("Updated Name");
-    request.setDescription("New description");
+    request.setDescription(JsonNullable.of("New description"));
     request.setStatus(ReleaseStatusDto.IN_PROGRESS);
 
     mockMvc
@@ -365,7 +366,8 @@ class ReleaseControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("rel_noinclude"))
         .andExpect(jsonPath("$.name").value("Release Without Include"))
-        .andExpect(jsonPath("$.epics").isEmpty());
+        // With JsonNullable serialization, undefined fields are not serialized at all
+        .andExpect(jsonPath("$.epics").doesNotExist());
   }
 
   @Test

@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import org.openapitools.jackson.nullable.JsonNullable;
+
 import com.specflux.api.generated.model.UserDto;
 import com.specflux.user.domain.User;
 
@@ -24,7 +26,7 @@ public class UserMapper {
     dto.setId(domain.getPublicId());
     dto.setEmail(domain.getEmail());
     dto.setDisplayName(domain.getDisplayName());
-    dto.setAvatarUrl(domain.getAvatarUrl());
+    dto.setAvatarUrl(JsonNullable.of(domain.getAvatarUrl()));
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     return dto;
   }

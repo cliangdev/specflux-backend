@@ -46,8 +46,8 @@ public class UserApplicationService {
           if (request.getDisplayName() != null) {
             user.setDisplayName(request.getDisplayName());
           }
-          if (request.getAvatarUrl() != null) {
-            user.setAvatarUrl(request.getAvatarUrl());
+          if (request.getAvatarUrl() != null && request.getAvatarUrl().isPresent()) {
+            user.setAvatarUrl(request.getAvatarUrl().get());
           }
 
           User saved = userRepository.save(user);

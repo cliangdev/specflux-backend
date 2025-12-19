@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -38,7 +39,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
     CreateProjectRequestDto request = new CreateProjectRequestDto();
     request.setProjectKey("SPEC");
     request.setName("SpecFlux");
-    request.setDescription("A project management tool");
+    request.setDescription(JsonNullable.of("A project management tool"));
 
     mockMvc
         .perform(
@@ -140,7 +141,7 @@ class ProjectControllerTest extends AbstractControllerIntegrationTest {
 
     UpdateProjectRequestDto request = new UpdateProjectRequestDto();
     request.setName("Updated Name");
-    request.setDescription("Updated description");
+    request.setDescription(JsonNullable.of("Updated description"));
 
     mockMvc
         .perform(

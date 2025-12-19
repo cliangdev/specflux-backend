@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -67,11 +68,17 @@ public class TaskApplicationService {
 
     Task task =
         new Task(publicId, project, sequenceNumber, displayKey, request.getTitle(), currentUser);
-    task.setDescription(request.getDescription());
 
-    // Set optional fields
-    if (request.getEpicRef() != null) {
-      Epic epic = refResolver.resolveEpic(project, request.getEpicRef());
+    // Handle nullable description
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      task.setDescription(request.getDescription().get());
+    }
+
+    // Set optional fields (nullable with JsonNullable wrapper)
+    if (request.getEpicRef() != null
+        && request.getEpicRef().isPresent()
+        && request.getEpicRef().get() != null) {
+      Epic epic = refResolver.resolveEpic(project, request.getEpicRef().get());
       task.setEpic(epic);
     }
     if (request.getPriority() != null) {
@@ -80,11 +87,15 @@ public class TaskApplicationService {
     if (request.getRequiresApproval() != null) {
       task.setRequiresApproval(request.getRequiresApproval());
     }
-    if (request.getEstimatedDuration() != null) {
-      task.setEstimatedDuration(request.getEstimatedDuration());
+    if (request.getEstimatedDuration() != null
+        && request.getEstimatedDuration().isPresent()
+        && request.getEstimatedDuration().get() != null) {
+      task.setEstimatedDuration(request.getEstimatedDuration().get());
     }
-    if (request.getAssignedToRef() != null) {
-      User assignee = refResolver.resolveUser(request.getAssignedToRef());
+    if (request.getAssignedToRef() != null
+        && request.getAssignedToRef().isPresent()
+        && request.getAssignedToRef().get() != null) {
+      User assignee = refResolver.resolveUser(request.getAssignedToRef().get());
       task.setAssignedTo(assignee);
     }
 
@@ -106,7 +117,15 @@ public class TaskApplicationService {
   }
 
   /**
-   * Updates a task (partial update via PATCH).
+   * Updates a task using JSON Merge Patch semantics (RFC 7396).
+   *
+   * <p>Field handling:
+   *
+   * <ul>
+   *   <li>Field absent in JSON: don't modify (JsonNullable.isPresent() == false)
+   *   <li>Field explicitly null: clear the value (JsonNullable.get() == null)
+   *   <li>Field has value: set the value
+   * </ul>
    *
    * @param projectRef the project reference
    * @param taskRef the task reference
@@ -117,37 +136,66 @@ public class TaskApplicationService {
     Project project = refResolver.resolveProject(projectRef);
     Task task = refResolver.resolveTask(project, taskRef);
 
+    // Non-nullable field (title) - only update if provided
     if (request.getTitle() != null) {
       task.setTitle(request.getTitle());
     }
-    if (request.getDescription() != null) {
-      task.setDescription(request.getDescription());
+
+    // Nullable field (description) - JSON Merge Patch: present means update, null means clear
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      task.setDescription(request.getDescription().get());
     }
+
+    // Non-nullable enum field (status) - only update if provided
     if (request.getStatus() != null) {
       task.setStatus(TaskMapper.toDomainStatus(request.getStatus()));
     }
+
+    // Non-nullable enum field (priority) - only update if provided
     if (request.getPriority() != null) {
       task.setPriority(TaskMapper.toDomainPriority(request.getPriority()));
     }
+
+    // Non-nullable field (requiresApproval) - only update if provided
     if (request.getRequiresApproval() != null) {
       task.setRequiresApproval(request.getRequiresApproval());
     }
-    if (request.getEstimatedDuration() != null) {
-      task.setEstimatedDuration(request.getEstimatedDuration());
+
+    // Nullable field (estimatedDuration) - JSON Merge Patch
+    if (request.getEstimatedDuration() != null && request.getEstimatedDuration().isPresent()) {
+      task.setEstimatedDuration(request.getEstimatedDuration().get());
     }
-    if (request.getActualDuration() != null) {
-      task.setActualDuration(request.getActualDuration());
+
+    // Nullable field (actualDuration) - JSON Merge Patch
+    if (request.getActualDuration() != null && request.getActualDuration().isPresent()) {
+      task.setActualDuration(request.getActualDuration().get());
     }
-    if (request.getGithubPrUrl() != null) {
-      task.setGithubPrUrl(request.getGithubPrUrl());
+
+    // Nullable field (githubPrUrl) - JSON Merge Patch
+    if (request.getGithubPrUrl() != null && request.getGithubPrUrl().isPresent()) {
+      task.setGithubPrUrl(request.getGithubPrUrl().get());
     }
-    if (request.getEpicRef() != null) {
-      Epic epic = refResolver.resolveEpicOptional(project, request.getEpicRef());
-      task.setEpic(epic);
+
+    // Nullable field (epicRef) - JSON Merge Patch: null clears, value sets
+    if (request.getEpicRef() != null && request.getEpicRef().isPresent()) {
+      String epicRefValue = request.getEpicRef().get();
+      if (epicRefValue == null) {
+        task.setEpic(null);
+      } else {
+        Epic epic = refResolver.resolveEpic(project, epicRefValue);
+        task.setEpic(epic);
+      }
     }
-    if (request.getAssignedToRef() != null) {
-      User assignee = refResolver.resolveUserOptional(request.getAssignedToRef());
-      task.setAssignedTo(assignee);
+
+    // Nullable field (assignedToRef) - JSON Merge Patch: null clears, value sets
+    if (request.getAssignedToRef() != null && request.getAssignedToRef().isPresent()) {
+      String assignedToRefValue = request.getAssignedToRef().get();
+      if (assignedToRefValue == null) {
+        task.setAssignedTo(null);
+      } else {
+        User assignee = refResolver.resolveUser(assignedToRefValue);
+        task.setAssignedTo(assignee);
+      }
     }
 
     Task saved = transactionTemplate.execute(_ -> taskRepository.save(task));
@@ -273,11 +321,11 @@ public class TaskApplicationService {
 
     if (hasMore) {
       int nextOffset = offset + limit;
-      pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
+      pagination.setNextCursor(JsonNullable.of(encodeCursor(new CursorData(nextOffset))));
     }
     if (offset > 0) {
       int prevOffset = Math.max(0, offset - limit);
-      pagination.setPrevCursor(encodeCursor(new CursorData(prevOffset)));
+      pagination.setPrevCursor(JsonNullable.of(encodeCursor(new CursorData(prevOffset))));
     }
 
     response.setPagination(pagination);

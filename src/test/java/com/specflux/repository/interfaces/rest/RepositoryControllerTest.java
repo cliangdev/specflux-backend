@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -47,7 +48,7 @@ class RepositoryControllerTest extends AbstractControllerIntegrationTest {
     CreateRepositoryRequestDto request = new CreateRepositoryRequestDto();
     request.setName("backend");
     request.setPath("/Users/dev/projects/backend");
-    request.setGitUrl("https://github.com/org/backend.git");
+    request.setGitUrl(JsonNullable.of("https://github.com/org/backend.git"));
 
     mockMvc
         .perform(
@@ -141,7 +142,7 @@ class RepositoryControllerTest extends AbstractControllerIntegrationTest {
 
     UpdateRepositoryRequestDto request = new UpdateRepositoryRequestDto();
     request.setName("updated-name");
-    request.setGitUrl("https://github.com/new/url.git");
+    request.setGitUrl(JsonNullable.of("https://github.com/new/url.git"));
 
     mockMvc
         .perform(

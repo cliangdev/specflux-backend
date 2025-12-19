@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -58,7 +59,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
   void createEpic_shouldReturnCreatedEpic() throws Exception {
     CreateEpicRequestDto request = new CreateEpicRequestDto();
     request.setTitle("User Authentication Feature");
-    request.setDescription("Implement OAuth2 authentication");
+    request.setDescription(JsonNullable.of("Implement OAuth2 authentication"));
     request.addAcceptanceCriteriaItem(
         new CreateEpicRequestAcceptanceCriteriaInnerDto().criteria("Users can log in with OAuth2"));
 
@@ -172,7 +173,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     UpdateEpicRequestDto request = new UpdateEpicRequestDto();
     request.setTitle("Updated Title");
-    request.setDescription("New description");
+    request.setDescription(JsonNullable.of("New description"));
     request.setStatus(EpicStatusDto.IN_PROGRESS);
 
     mockMvc
@@ -197,7 +198,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
             new Epic("epic_notes", testProject, 1, "EPIC-E1", "Epic With Notes", testUser));
 
     UpdateEpicRequestDto request = new UpdateEpicRequestDto();
-    request.setNotes("Session handoff: Completed task 1, working on task 2");
+    request.setNotes(JsonNullable.of("Session handoff: Completed task 1, working on task 2"));
 
     mockMvc
         .perform(
@@ -660,7 +661,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     CreateAcceptanceCriteriaRequestDto request = new CreateAcceptanceCriteriaRequestDto();
     request.setCriteria("All user stories must be implemented");
-    request.setOrderIndex(0);
+    request.setOrderIndex(JsonNullable.of(0));
 
     mockMvc
         .perform(
@@ -687,7 +688,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
     // Create criteria
     CreateAcceptanceCriteriaRequestDto request1 = new CreateAcceptanceCriteriaRequestDto();
     request1.setCriteria("First criterion");
-    request1.setOrderIndex(0);
+    request1.setOrderIndex(JsonNullable.of(0));
     mockMvc
         .perform(
             post(
@@ -701,7 +702,7 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
 
     CreateAcceptanceCriteriaRequestDto request2 = new CreateAcceptanceCriteriaRequestDto();
     request2.setCriteria("Second criterion");
-    request2.setOrderIndex(1);
+    request2.setOrderIndex(JsonNullable.of(1));
     mockMvc
         .perform(
             post(
@@ -889,5 +890,187 @@ class EpicControllerTest extends AbstractControllerIntegrationTest {
                 testProject.getPublicId(),
                 "epic_123"))
         .andExpect(status().isForbidden());
+  }
+
+  // ==================== JSON MERGE PATCH (RFC 7396) TESTS ====================
+
+  @Test
+  void updateEpic_withExplicitNullDescription_shouldClearDescription() throws Exception {
+    Epic epic = new Epic("epic_nulldesc", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setDescription("Original description");
+    epicRepository.save(epic);
+
+    // Send raw JSON with explicit null for description
+    String jsonRequest = "{\"description\": null}";
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_nulldesc")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Epic"))
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_withExplicitNullNotes_shouldClearNotes() throws Exception {
+    Epic epic = new Epic("epic_nullnotes", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setNotes("Session notes to be cleared");
+    epicRepository.save(epic);
+
+    // Send raw JSON with explicit null for notes
+    String jsonRequest = "{\"notes\": null}";
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_nullnotes")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Epic"))
+        .andExpect(jsonPath("$.notes").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_withExplicitNullPrdRef_shouldUnlinkPrd() throws Exception {
+    // Create PRD
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_tounlink",
+                testProject,
+                1,
+                "EPIC-P1",
+                "PRD to Unlink",
+                ".specflux/prds/unlink",
+                testUser));
+
+    // Create epic linked to PRD
+    Epic epic = new Epic("epic_unlinkprd", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setPrdId(prd.getId());
+    epicRepository.save(epic);
+
+    // Verify initial state - epic is linked to PRD
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_unlinkprd")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.prdId").value(prd.getPublicId()));
+
+    // Send raw JSON with explicit null for prdRef to unlink
+    String jsonRequest = "{\"prdRef\": null}";
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_unlinkprd")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Epic"))
+        .andExpect(jsonPath("$.prdId").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_withExplicitNullReleaseRef_shouldUnlinkRelease() throws Exception {
+    // Create release
+    Release release =
+        releaseRepository.save(new Release("rel_tounlink", testProject, 1, "EPIC-R1", "v1.0"));
+
+    // Create epic linked to release
+    Epic epic = new Epic("epic_unlinkrel", testProject, 1, "EPIC-E1", "Test Epic", testUser);
+    epic.setReleaseId(release.getId());
+    epicRepository.save(epic);
+
+    // Verify initial state - epic is linked to release
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_unlinkrel")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.releaseId").value(release.getPublicId()));
+
+    // Send raw JSON with explicit null for releaseRef to unlink
+    String jsonRequest = "{\"releaseRef\": null}";
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_unlinkrel")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Epic"))
+        .andExpect(jsonPath("$.releaseId").doesNotExist());
+  }
+
+  @Test
+  void updateEpic_withAbsentFields_shouldNotModifyThem() throws Exception {
+    Epic epic = new Epic("epic_absent", testProject, 1, "EPIC-E1", "Original Title", testUser);
+    epic.setDescription("Original description");
+    epic.setNotes("Original notes");
+    epicRepository.save(epic);
+
+    // Send raw JSON with only title - description and notes are absent (not null)
+    String jsonRequest = "{\"title\": \"New Title\"}";
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_absent")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("New Title"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.notes").value("Original notes"));
+  }
+
+  @Test
+  void updateEpic_withEmptyObject_shouldNotModifyAnyFields() throws Exception {
+    Epic epic = new Epic("epic_empty", testProject, 1, "EPIC-E1", "Original Title", testUser);
+    epic.setDescription("Original description");
+    epicRepository.save(epic);
+
+    // Send empty JSON object - no fields should change
+    String jsonRequest = "{}";
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/epics/{epicRef}",
+                    testProject.getPublicId(),
+                    "epic_empty")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Original Title"))
+        .andExpect(jsonPath("$.description").value("Original description"));
   }
 }

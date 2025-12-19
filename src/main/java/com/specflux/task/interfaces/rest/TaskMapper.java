@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import org.openapitools.jackson.nullable.JsonNullable;
+
 import com.specflux.api.generated.model.TaskDto;
 import com.specflux.api.generated.model.TaskPriorityDto;
 import com.specflux.api.generated.model.TaskStatusDto;
@@ -29,20 +31,20 @@ public class TaskMapper {
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
-    dto.setDescription(domain.getDescription());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
     dto.setStatus(toApiStatus(domain.getStatus()));
     dto.setPriority(toApiPriority(domain.getPriority()));
     dto.setRequiresApproval(domain.getRequiresApproval());
-    dto.setEstimatedDuration(domain.getEstimatedDuration());
-    dto.setActualDuration(domain.getActualDuration());
-    dto.setGithubPrUrl(domain.getGithubPrUrl());
+    dto.setEstimatedDuration(JsonNullable.of(domain.getEstimatedDuration()));
+    dto.setActualDuration(JsonNullable.of(domain.getActualDuration()));
+    dto.setGithubPrUrl(JsonNullable.of(domain.getGithubPrUrl()));
     dto.setCreatedById(domain.getCreatedBy().getPublicId());
     if (domain.getAssignedTo() != null) {
-      dto.setAssignedToId(domain.getAssignedTo().getPublicId());
+      dto.setAssignedToId(JsonNullable.of(domain.getAssignedTo().getPublicId()));
     }
     if (domain.getEpic() != null) {
-      dto.setEpicId(domain.getEpic().getPublicId());
-      dto.setEpicDisplayKey(domain.getEpic().getDisplayKey());
+      dto.setEpicId(JsonNullable.of(domain.getEpic().getPublicId()));
+      dto.setEpicDisplayKey(JsonNullable.of(domain.getEpic().getDisplayKey()));
     }
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));

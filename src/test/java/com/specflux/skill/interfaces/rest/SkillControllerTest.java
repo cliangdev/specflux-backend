@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -46,8 +47,8 @@ class SkillControllerTest extends AbstractControllerIntegrationTest {
   void createSkill_shouldReturnCreatedSkill() throws Exception {
     CreateSkillRequestDto request = new CreateSkillRequestDto();
     request.setName("typescript-patterns");
-    request.setDescription("TypeScript best practices and patterns");
-    request.setFolderPath(".claude/skills/typescript-patterns");
+    request.setDescription(JsonNullable.of("TypeScript best practices and patterns"));
+    request.setFolderPath(JsonNullable.of(".claude/skills/typescript-patterns"));
 
     mockMvc
         .perform(
@@ -85,7 +86,7 @@ class SkillControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void createSkill_withMissingName_shouldReturn400() throws Exception {
     CreateSkillRequestDto request = new CreateSkillRequestDto();
-    request.setDescription("A skill without a name");
+    request.setDescription(JsonNullable.of("A skill without a name"));
     // name is missing
 
     mockMvc
@@ -136,7 +137,7 @@ class SkillControllerTest extends AbstractControllerIntegrationTest {
 
     UpdateSkillRequestDto request = new UpdateSkillRequestDto();
     request.setName("updated-skill");
-    request.setDescription("Updated description");
+    request.setDescription(JsonNullable.of("Updated description"));
 
     mockMvc
         .perform(

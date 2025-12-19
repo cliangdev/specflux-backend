@@ -5,6 +5,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -60,8 +61,12 @@ public class ProjectApplicationService {
 
           Project project =
               new Project(publicId, request.getProjectKey(), request.getName(), owner);
-          project.setDescription(request.getDescription());
-          project.setLocalPath(request.getLocalPath());
+          if (request.getDescription() != null && request.getDescription().isPresent()) {
+            project.setDescription(request.getDescription().get());
+          }
+          if (request.getLocalPath() != null && request.getLocalPath().isPresent()) {
+            project.setLocalPath(request.getLocalPath().get());
+          }
 
           Project saved = projectRepository.save(project);
 
@@ -97,11 +102,11 @@ public class ProjectApplicationService {
     if (request.getName() != null) {
       project.setName(request.getName());
     }
-    if (request.getDescription() != null) {
-      project.setDescription(request.getDescription());
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      project.setDescription(request.getDescription().get());
     }
-    if (request.getLocalPath() != null) {
-      project.setLocalPath(request.getLocalPath());
+    if (request.getLocalPath() != null && request.getLocalPath().isPresent()) {
+      project.setLocalPath(request.getLocalPath().get());
     }
 
     Project saved = transactionTemplate.execute(status -> projectRepository.save(project));
@@ -172,11 +177,11 @@ public class ProjectApplicationService {
 
     if (hasMore) {
       int nextOffset = offset + limit;
-      pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
+      pagination.setNextCursor(JsonNullable.of(encodeCursor(new CursorData(nextOffset))));
     }
     if (cursorData != null && cursorData.offset() > 0) {
       int prevOffset = Math.max(0, cursorData.offset() - limit);
-      pagination.setPrevCursor(encodeCursor(new CursorData(prevOffset)));
+      pagination.setPrevCursor(JsonNullable.of(encodeCursor(new CursorData(prevOffset))));
     }
 
     response.setPagination(pagination);

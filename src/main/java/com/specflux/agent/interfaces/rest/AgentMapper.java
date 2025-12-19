@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import org.openapitools.jackson.nullable.JsonNullable;
+
 import com.specflux.agent.domain.Agent;
 import com.specflux.api.generated.model.AgentDto;
 
@@ -18,8 +20,8 @@ public class AgentMapper {
     dto.setId(domain.getPublicId());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setName(domain.getName());
-    dto.setDescription(domain.getDescription());
-    dto.setFilePath(domain.getFilePath());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
+    dto.setFilePath(JsonNullable.of(domain.getFilePath()));
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
     return dto;

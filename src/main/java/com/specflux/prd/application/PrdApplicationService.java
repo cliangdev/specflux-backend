@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -66,7 +67,10 @@ public class PrdApplicationService {
           String displayKey = project.getProjectKey() + "-P" + sequenceNumber;
 
           // Generate folder path from title if not provided
-          String folderPath = request.getFolderPath();
+          String folderPath =
+              request.getFolderPath() != null && request.getFolderPath().isPresent()
+                  ? request.getFolderPath().get()
+                  : null;
           if (folderPath == null || folderPath.isBlank()) {
             String slug = slugify(request.getTitle());
             folderPath = ".specflux/prds/" + slug;
@@ -81,7 +85,9 @@ public class PrdApplicationService {
                   request.getTitle(),
                   folderPath,
                   currentUser);
-          prd.setDescription(request.getDescription());
+          if (request.getDescription() != null && request.getDescription().isPresent()) {
+            prd.setDescription(request.getDescription().get());
+          }
 
           Prd saved = prdRepository.save(prd);
           return prdMapper.toDto(saved);
@@ -116,8 +122,8 @@ public class PrdApplicationService {
     if (request.getTitle() != null) {
       prd.setTitle(request.getTitle());
     }
-    if (request.getDescription() != null) {
-      prd.setDescription(request.getDescription());
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      prd.setDescription(request.getDescription().get());
     }
     if (request.getStatus() != null) {
       prd.setStatus(prdMapper.toDomainStatus(request.getStatus()));
@@ -200,11 +206,11 @@ public class PrdApplicationService {
 
     if (hasMore) {
       int nextOffset = offset + limit;
-      pagination.setNextCursor(encodeCursor(new CursorData(nextOffset)));
+      pagination.setNextCursor(JsonNullable.of(encodeCursor(new CursorData(nextOffset))));
     }
     if (offset > 0) {
       int prevOffset = Math.max(0, offset - limit);
-      pagination.setPrevCursor(encodeCursor(new CursorData(prevOffset)));
+      pagination.setPrevCursor(JsonNullable.of(encodeCursor(new CursorData(prevOffset))));
     }
 
     response.setPagination(pagination);
@@ -234,8 +240,8 @@ public class PrdApplicationService {
     }
 
     int orderIndex =
-        request.getOrderIndex() != null
-            ? request.getOrderIndex()
+        request.getOrderIndex() != null && request.getOrderIndex().isPresent()
+            ? request.getOrderIndex().get()
             : prdDocumentRepository.countByPrdId(prd.getId());
 
     PrdDocumentType docType =

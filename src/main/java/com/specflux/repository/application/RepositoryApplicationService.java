@@ -48,8 +48,8 @@ public class RepositoryApplicationService {
     String publicId = generatePublicId("repo");
     Repository repository = new Repository(publicId, project, request.getName(), request.getPath());
 
-    if (request.getGitUrl() != null) {
-      repository.setGitUrl(request.getGitUrl());
+    if (request.getGitUrl() != null && request.getGitUrl().isPresent()) {
+      repository.setGitUrl(request.getGitUrl().get());
     }
     if (request.getDefaultBranch() != null) {
       repository.setDefaultBranch(request.getDefaultBranch());
@@ -73,8 +73,8 @@ public class RepositoryApplicationService {
     if (request.getName() != null) {
       repository.setName(request.getName());
     }
-    if (request.getGitUrl() != null) {
-      repository.setGitUrl(request.getGitUrl());
+    if (request.getGitUrl() != null && request.getGitUrl().isPresent()) {
+      repository.setGitUrl(request.getGitUrl().get());
     }
     if (request.getDefaultBranch() != null) {
       repository.setDefaultBranch(request.getDefaultBranch());

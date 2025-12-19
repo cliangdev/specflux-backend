@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.stereotype.Service;
 
 import com.specflux.acceptancecriteria.domain.AcceptanceCriteria;
@@ -58,8 +59,8 @@ public class ReleaseMapper {
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setName(domain.getName());
-    dto.setDescription(domain.getDescription());
-    dto.setTargetDate(domain.getTargetDate());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
+    dto.setTargetDate(JsonNullable.of(domain.getTargetDate()));
     dto.setStatus(toApiStatus(domain.getStatus()));
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
@@ -81,8 +82,8 @@ public class ReleaseMapper {
     dto.setDisplayKey(domain.getDisplayKey());
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setName(domain.getName());
-    dto.setDescription(domain.getDescription());
-    dto.setTargetDate(domain.getTargetDate());
+    dto.setDescription(JsonNullable.of(domain.getDescription()));
+    dto.setTargetDate(JsonNullable.of(domain.getTargetDate()));
     dto.setStatus(toApiStatus(domain.getStatus()));
     dto.setCreatedAt(toOffsetDateTime(domain.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(domain.getUpdatedAt()));
@@ -91,7 +92,7 @@ public class ReleaseMapper {
     if (!epics.isEmpty()) {
       List<EpicWithTasksDto> epicDtos =
           epics.stream().map(epic -> toEpicWithTasksDto(epic, includeTasks)).toList();
-      dto.setEpics(epicDtos);
+      dto.setEpics(JsonNullable.of(epicDtos));
     }
 
     return dto;
@@ -110,27 +111,30 @@ public class ReleaseMapper {
     dto.setDisplayKey(epic.getDisplayKey());
     dto.setProjectId(epic.getProject().getPublicId());
     dto.setTitle(epic.getTitle());
-    dto.setDescription(epic.getDescription());
+    dto.setDescription(JsonNullable.of(epic.getDescription()));
     dto.setStatus(toEpicApiStatus(epic.getStatus()));
-    dto.setTargetDate(epic.getTargetDate());
+    dto.setTargetDate(JsonNullable.of(epic.getTargetDate()));
     dto.setCreatedById(epic.getCreatedBy().getPublicId());
     dto.setCreatedAt(toOffsetDateTime(epic.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(epic.getUpdatedAt()));
-    dto.setNotes(epic.getNotes());
+    dto.setNotes(JsonNullable.of(epic.getNotes()));
 
     // PRD reference
     if (epic.getPrdId() != null) {
-      prdRepository.findById(epic.getPrdId()).map(Prd::getPublicId).ifPresent(dto::setPrdId);
+      prdRepository
+          .findById(epic.getPrdId())
+          .map(Prd::getPublicId)
+          .ifPresent(prdId -> dto.setPrdId(JsonNullable.of(prdId)));
     }
-    dto.setPrdFilePath(epic.getPrdFilePath());
-    dto.setEpicFilePath(epic.getEpicFilePath());
+    dto.setPrdFilePath(JsonNullable.of(epic.getPrdFilePath()));
+    dto.setEpicFilePath(JsonNullable.of(epic.getEpicFilePath()));
 
     // Release ID
     if (epic.getReleaseId() != null) {
       releaseRepository
           .findById(epic.getReleaseId())
           .map(Release::getPublicId)
-          .ifPresent(dto::setReleaseId);
+          .ifPresent(releaseId -> dto.setReleaseId(JsonNullable.of(releaseId)));
     }
 
     // Task stats
@@ -151,7 +155,7 @@ public class ReleaseMapper {
     // Include tasks if requested
     if (includeTasks) {
       List<TaskWithCriteriaDto> taskDtos = tasks.stream().map(this::toTaskWithCriteriaDto).toList();
-      dto.setTasks(taskDtos);
+      dto.setTasks(JsonNullable.of(taskDtos));
     }
 
     return dto;
@@ -169,26 +173,28 @@ public class ReleaseMapper {
     dto.setDisplayKey(task.getDisplayKey());
     dto.setProjectId(task.getProject().getPublicId());
     dto.setTitle(task.getTitle());
-    dto.setDescription(task.getDescription());
+    dto.setDescription(JsonNullable.of(task.getDescription()));
     dto.setStatus(toTaskApiStatus(task.getStatus()));
     dto.setPriority(toTaskApiPriority(task.getPriority()));
     dto.setRequiresApproval(task.getRequiresApproval());
     dto.setEstimatedDuration(
-        task.getEstimatedDuration() != null ? task.getEstimatedDuration().toString() : null);
+        JsonNullable.of(
+            task.getEstimatedDuration() != null ? task.getEstimatedDuration().toString() : null));
     dto.setActualDuration(
-        task.getActualDuration() != null ? task.getActualDuration().toString() : null);
-    dto.setGithubPrUrl(task.getGithubPrUrl());
+        JsonNullable.of(
+            task.getActualDuration() != null ? task.getActualDuration().toString() : null));
+    dto.setGithubPrUrl(JsonNullable.of(task.getGithubPrUrl()));
     dto.setCreatedById(task.getCreatedBy().getPublicId());
     dto.setCreatedAt(toOffsetDateTime(task.getCreatedAt()));
     dto.setUpdatedAt(toOffsetDateTime(task.getUpdatedAt()));
 
     if (task.getAssignedTo() != null) {
-      dto.setAssignedToId(task.getAssignedTo().getPublicId());
+      dto.setAssignedToId(JsonNullable.of(task.getAssignedTo().getPublicId()));
     }
 
     if (task.getEpic() != null) {
-      dto.setEpicId(task.getEpic().getPublicId());
-      dto.setEpicDisplayKey(task.getEpic().getDisplayKey());
+      dto.setEpicId(JsonNullable.of(task.getEpic().getPublicId()));
+      dto.setEpicDisplayKey(JsonNullable.of(task.getEpic().getDisplayKey()));
     }
 
     // Acceptance criteria

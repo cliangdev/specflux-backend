@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -46,8 +47,8 @@ class AgentControllerTest extends AbstractControllerIntegrationTest {
   void createAgent_shouldReturnCreatedAgent() throws Exception {
     CreateAgentRequestDto request = new CreateAgentRequestDto();
     request.setName("backend-dev");
-    request.setDescription("Backend development specialist");
-    request.setFilePath(".claude/agents/backend-dev.md");
+    request.setDescription(JsonNullable.of("Backend development specialist"));
+    request.setFilePath(JsonNullable.of(".claude/agents/backend-dev.md"));
 
     mockMvc
         .perform(
@@ -85,7 +86,7 @@ class AgentControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void createAgent_withMissingName_shouldReturn400() throws Exception {
     CreateAgentRequestDto request = new CreateAgentRequestDto();
-    request.setDescription("An agent without a name");
+    request.setDescription(JsonNullable.of("An agent without a name"));
     // name is missing
 
     mockMvc
@@ -136,7 +137,7 @@ class AgentControllerTest extends AbstractControllerIntegrationTest {
 
     UpdateAgentRequestDto request = new UpdateAgentRequestDto();
     request.setName("updated-agent");
-    request.setDescription("Updated description");
+    request.setDescription(JsonNullable.of("Updated description"));
 
     mockMvc
         .perform(

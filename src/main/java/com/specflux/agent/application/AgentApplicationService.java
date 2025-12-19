@@ -48,11 +48,11 @@ public class AgentApplicationService {
     String publicId = generatePublicId("agent");
     Agent agent = new Agent(publicId, project, request.getName());
 
-    if (request.getDescription() != null) {
-      agent.setDescription(request.getDescription());
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      agent.setDescription(request.getDescription().get());
     }
-    if (request.getFilePath() != null) {
-      agent.setFilePath(request.getFilePath());
+    if (request.getFilePath() != null && request.getFilePath().isPresent()) {
+      agent.setFilePath(request.getFilePath().get());
     }
 
     Agent saved = transactionTemplate.execute(status -> agentRepository.save(agent));
@@ -72,11 +72,11 @@ public class AgentApplicationService {
     if (request.getName() != null) {
       agent.setName(request.getName());
     }
-    if (request.getDescription() != null) {
-      agent.setDescription(request.getDescription());
+    if (request.getDescription() != null && request.getDescription().isPresent()) {
+      agent.setDescription(request.getDescription().get());
     }
-    if (request.getFilePath() != null) {
-      agent.setFilePath(request.getFilePath());
+    if (request.getFilePath() != null && request.getFilePath().isPresent()) {
+      agent.setFilePath(request.getFilePath().get());
     }
 
     Agent saved = transactionTemplate.execute(status -> agentRepository.save(agent));

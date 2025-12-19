@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -55,7 +56,7 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
   void createPrd_shouldReturnCreatedPrd() throws Exception {
     CreatePrdRequestDto request = new CreatePrdRequestDto();
     request.setTitle("Authentication System");
-    request.setDescription("User authentication with OAuth2");
+    request.setDescription(JsonNullable.of("User authentication with OAuth2"));
 
     mockMvc
         .perform(
@@ -98,7 +99,7 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
   void createPrd_withCustomFolderPath_shouldUseFolderPath() throws Exception {
     CreatePrdRequestDto request = new CreatePrdRequestDto();
     request.setTitle("Custom PRD");
-    request.setFolderPath(".specflux/prds/custom-path");
+    request.setFolderPath(JsonNullable.of(".specflux/prds/custom-path"));
 
     mockMvc
         .perform(
@@ -219,7 +220,7 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
 
     UpdatePrdRequestDto request = new UpdatePrdRequestDto();
     request.setTitle("Updated Title");
-    request.setDescription("New description");
+    request.setDescription(JsonNullable.of("New description"));
     request.setStatus(PrdStatusDto.IN_REVIEW);
 
     mockMvc

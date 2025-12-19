@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -61,7 +62,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
   void createTask_shouldReturnCreatedTask() throws Exception {
     CreateTaskRequestDto request = new CreateTaskRequestDto();
     request.setTitle("Implement authentication");
-    request.setDescription("Add OAuth2 support");
+    request.setDescription(JsonNullable.of("Add OAuth2 support"));
     request.setPriority(TaskPriorityDto.HIGH);
     request.setRequiresApproval(true);
 
@@ -89,7 +90,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
   void createTask_withEpic_shouldLinkToEpic() throws Exception {
     CreateTaskRequestDto request = new CreateTaskRequestDto();
     request.setTitle("Task with Epic");
-    request.setEpicRef(testEpic.getPublicId());
+    request.setEpicRef(JsonNullable.of(testEpic.getPublicId()));
 
     mockMvc
         .perform(
@@ -175,7 +176,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     UpdateTaskRequestDto request = new UpdateTaskRequestDto();
     request.setTitle("Updated Title");
-    request.setDescription("New description");
+    request.setDescription(JsonNullable.of("New description"));
     request.setStatus(TaskStatusDto.IN_PROGRESS);
     request.setPriority(TaskPriorityDto.CRITICAL);
 
@@ -606,7 +607,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     CreateAcceptanceCriteriaRequestDto request = new CreateAcceptanceCriteriaRequestDto();
     request.setCriteria("Feature must support offline mode");
-    request.setOrderIndex(0);
+    request.setOrderIndex(JsonNullable.of(0));
 
     mockMvc
         .perform(
@@ -669,7 +670,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
     // Create criteria in reverse order
     CreateAcceptanceCriteriaRequestDto request1 = new CreateAcceptanceCriteriaRequestDto();
     request1.setCriteria("Second item");
-    request1.setOrderIndex(1);
+    request1.setOrderIndex(JsonNullable.of(1));
     mockMvc
         .perform(
             post(
@@ -683,7 +684,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
     CreateAcceptanceCriteriaRequestDto request2 = new CreateAcceptanceCriteriaRequestDto();
     request2.setCriteria("First item");
-    request2.setOrderIndex(0);
+    request2.setOrderIndex(JsonNullable.of(0));
     mockMvc
         .perform(
             post(
@@ -892,5 +893,163 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
                 testProject.getPublicId(),
                 "task_123"))
         .andExpect(status().isForbidden());
+  }
+
+  // ==================== JSON MERGE PATCH (RFC 7396) TESTS ====================
+
+  @Test
+  void updateTask_withExplicitNullDescription_shouldClearDescription() throws Exception {
+    Task task = new Task("task_nulldesc", testProject, 1, "TASK-1", "Test Task", testUser);
+    task.setDescription("Original description");
+    taskRepository.save(task);
+
+    // Send raw JSON with explicit null for description
+    String jsonRequest = "{\"description\": null}";
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_nulldesc")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Task"))
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updateTask_withExplicitNullEpicRef_shouldUnlinkEpic() throws Exception {
+    // Create task linked to epic
+    Task task = new Task("task_unlinkepic", testProject, 1, "TASK-1", "Test Task", testUser);
+    task.setEpic(testEpic);
+    taskRepository.save(task);
+
+    // Verify initial state - task is linked to epic
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_unlinkepic")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.epicId").value(testEpic.getPublicId()));
+
+    // Send raw JSON with explicit null for epicRef to unlink
+    String jsonRequest = "{\"epicRef\": null}";
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_unlinkepic")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Task"))
+        .andExpect(jsonPath("$.epicId").doesNotExist());
+  }
+
+  @Test
+  void updateTask_withExplicitNullGithubPrUrl_shouldClearPrUrl() throws Exception {
+    Task task = new Task("task_nullpr", testProject, 1, "TASK-1", "Test Task", testUser);
+    task.setGithubPrUrl("https://github.com/org/repo/pull/123");
+    taskRepository.save(task);
+
+    // Send raw JSON with explicit null for githubPrUrl
+    String jsonRequest = "{\"githubPrUrl\": null}";
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_nullpr")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Task"))
+        .andExpect(jsonPath("$.githubPrUrl").doesNotExist());
+  }
+
+  @Test
+  void updateTask_withAbsentFields_shouldNotModifyThem() throws Exception {
+    Task task = new Task("task_absent", testProject, 1, "TASK-1", "Original Title", testUser);
+    task.setDescription("Original description");
+    task.setPriority(TaskPriority.HIGH);
+    task.setEpic(testEpic);
+    taskRepository.save(task);
+
+    // Send raw JSON with only title - other fields are absent (not null)
+    String jsonRequest = "{\"title\": \"New Title\"}";
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_absent")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("New Title"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.priority").value("HIGH"))
+        .andExpect(jsonPath("$.epicId").value(testEpic.getPublicId()));
+  }
+
+  @Test
+  void updateTask_withEmptyObject_shouldNotModifyAnyFields() throws Exception {
+    Task task = new Task("task_empty", testProject, 1, "TASK-1", "Original Title", testUser);
+    task.setDescription("Original description");
+    task.setPriority(TaskPriority.MEDIUM);
+    taskRepository.save(task);
+
+    // Send empty JSON object - no fields should change
+    String jsonRequest = "{}";
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_empty")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Original Title"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.priority").value("MEDIUM"));
+  }
+
+  @Test
+  void updateTask_withExplicitNullEstimatedDuration_shouldClearDuration() throws Exception {
+    Task task = new Task("task_nulldur", testProject, 1, "TASK-1", "Test Task", testUser);
+    task.setEstimatedDuration(8);
+    taskRepository.save(task);
+
+    // Send raw JSON with explicit null for estimatedDuration
+    String jsonRequest = "{\"estimatedDuration\": null}";
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_nulldur")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Test Task"))
+        .andExpect(jsonPath("$.estimatedDuration").doesNotExist());
   }
 }
