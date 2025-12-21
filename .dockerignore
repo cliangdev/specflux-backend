@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+*.iml
+.vscode
+
+# Build outputs (we build inside Docker)
+target/
+
+# Maven wrapper (not needed, using apk maven)
+.mvn
+mvnw
+mvnw.cmd
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+
+# Postman
+postman/
+
+# Local config
+.env*
+*.local
+
+# Logs
+*.log
+logs/

@@ -46,10 +46,6 @@
       "value": "http://localhost:8090/api"
     },
     {
-      "key": "firebaseEmulatorHost",
-      "value": "localhost:9099"
-    },
-    {
       "key": "testEmail",
       "value": "dev@specflux.local"
     },
@@ -148,7 +144,7 @@
           }
         },
         {
-          "name": "Get Firebase Token (Emulator)",
+          "name": "Get Firebase Token",
           "event": [
             {
               "listen": "test",
@@ -183,22 +179,21 @@
               "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"returnSecureToken\": true\n}"
             },
             "url": {
-              "raw": "http://{{firebaseEmulatorHost}}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key",
-              "protocol": "http",
-              "host": ["{{firebaseEmulatorHost}}"],
-              "path": ["identitytoolkit.googleapis.com", "v1", "accounts:signInWithPassword"],
+              "raw": "{{firebaseAuthUrl}}/v1/accounts:signInWithPassword?key={{firebaseApiKey}}",
+              "host": ["{{firebaseAuthUrl}}"],
+              "path": ["v1", "accounts:signInWithPassword"],
               "query": [
                 {
                   "key": "key",
-                  "value": "fake-api-key"
+                  "value": "{{firebaseApiKey}}"
                 }
               ]
             },
-            "description": "Sign in with Firebase Emulator to get a JWT token.\n\nUse this if you don't have a SpecFlux API key."
+            "description": "Sign in with Firebase to get a JWT token.\n\nWorks with both emulator (local) and production (staging) based on environment variables."
           }
         },
         {
-          "name": "Create Test User (Emulator)",
+          "name": "Create Test User",
           "event": [
             {
               "listen": "test",
@@ -209,6 +204,7 @@
                   "    if (response.idToken) {",
                   "        pm.environment.set('authToken', response.idToken);",
                   "        pm.environment.set('refreshToken', response.refreshToken);",
+                  "        console.log('User created and token saved');",
                   "    }",
                   "}"
                 ],
@@ -232,18 +228,17 @@
               "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"returnSecureToken\": true\n}"
             },
             "url": {
-              "raw": "http://{{firebaseEmulatorHost}}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key",
-              "protocol": "http",
-              "host": ["{{firebaseEmulatorHost}}"],
-              "path": ["identitytoolkit.googleapis.com", "v1", "accounts:signUp"],
+              "raw": "{{firebaseAuthUrl}}/v1/accounts:signUp?key={{firebaseApiKey}}",
+              "host": ["{{firebaseAuthUrl}}"],
+              "path": ["v1", "accounts:signUp"],
               "query": [
                 {
                   "key": "key",
-                  "value": "fake-api-key"
+                  "value": "{{firebaseApiKey}}"
                 }
               ]
             },
-            "description": "Create a new test user in Firebase Emulator."
+            "description": "Create a new test user in Firebase.\n\nWorks with both emulator (local) and production (staging) based on environment variables."
           }
         },
         {
@@ -281,17 +276,17 @@
               "raw": "{\n  \"grant_type\": \"refresh_token\",\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
             },
             "url": {
-              "raw": "http://{{firebaseEmulatorHost}}/securetoken.googleapis.com/v1/token?key=fake-api-key",
-              "protocol": "http",
-              "host": ["{{firebaseEmulatorHost}}"],
-              "path": ["securetoken.googleapis.com", "v1", "token"],
+              "raw": "{{firebaseTokenUrl}}/v1/token?key={{firebaseApiKey}}",
+              "host": ["{{firebaseTokenUrl}}"],
+              "path": ["v1", "token"],
               "query": [
                 {
                   "key": "key",
-                  "value": "fake-api-key"
+                  "value": "{{firebaseApiKey}}"
                 }
               ]
-            }
+            },
+            "description": "Refresh an expired Firebase token.\n\nWorks with both emulator (local) and production (staging) based on environment variables."
           }
         }
       ]
