@@ -51,7 +51,7 @@ jobs:
             --allow-unauthenticated \
             --port 8090 \
             --set-env-vars "SPRING_PROFILES_ACTIVE=staging,FIREBASE_CONFIG_PATH=/secrets/firebase/config.json" \
-            --set-secrets "DATABASE_URL=specflux-staging-db-url:latest,/secrets/firebase/config.json=specflux-staging-firebase-config:latest" \
+            --set-secrets "DATABASE_URL=specflux-staging-db-url:latest,/secrets/firebase/config.json=specflux-staging-firebase-credentials:latest" \
             --min-instances 0 \
             --max-instances 3 \
             --memory 512Mi \
