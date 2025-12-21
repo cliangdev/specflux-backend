@@ -60,16 +60,12 @@ jobs:
             --cpu 1 \
             --timeout 300
 
-      - name: Get Service URL
-        id: service-url
-        run: |
-          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
-            --region ${{ env.GCP_REGION }} \
-            --format 'value(status.url)')
-          echo "url=$URL" >> $GITHUB_OUTPUT
-
       - name: Smoke Test
         run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.url)')
+          echo "Service URL: $SERVICE_URL"
           sleep 10
-          curl -f ${{ steps.service-url.outputs.url }}/actuator/health || exit 1
+          curl -f "$SERVICE_URL/actuator/health" || exit 1
           echo "Staging deployment successful!"
