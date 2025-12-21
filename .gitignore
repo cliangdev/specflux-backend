@@ -78,3 +78,4 @@ application-local.properties
 firebase/.cache/
 firebase/data/
 firebase/firebase-export-*/
+scripts/
