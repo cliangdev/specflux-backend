@@ -247,7 +247,155 @@
           }
         },
         {
-          "name": "Refresh Token",
+          "name": "Get Firebase Token (Production)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.idToken) {",
+                  "        pm.environment.set('authToken', response.idToken);",
+                  "        pm.environment.set('refreshToken', response.refreshToken);",
+                  "        console.log('Firebase token saved to environment');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}",
+              "protocol": "https",
+              "host": ["identitytoolkit", "googleapis", "com"],
+              "path": ["v1", "accounts:signInWithPassword"],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{firebaseApiKey}}"
+                }
+              ]
+            },
+            "description": "Sign in with Firebase Production to get a JWT token.\n\nRequires `firebaseApiKey` to be set in the environment."
+          }
+        },
+        {
+          "name": "Create Test User (Production)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.idToken) {",
+                  "        pm.environment.set('authToken', response.idToken);",
+                  "        pm.environment.set('refreshToken', response.refreshToken);",
+                  "        console.log('User created and token saved');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKey}}",
+              "protocol": "https",
+              "host": ["identitytoolkit", "googleapis", "com"],
+              "path": ["v1", "accounts:signUp"],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{firebaseApiKey}}"
+                }
+              ]
+            },
+            "description": "Create a new user in Firebase Production.\n\nRequires `firebaseApiKey` to be set in the environment."
+          }
+        },
+        {
+          "name": "Refresh Token (Production)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.id_token) {",
+                  "        pm.environment.set('authToken', response.id_token);",
+                  "        pm.environment.set('refreshToken', response.refresh_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grant_type\": \"refresh_token\",\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "https://securetoken.googleapis.com/v1/token?key={{firebaseApiKey}}",
+              "protocol": "https",
+              "host": ["securetoken", "googleapis", "com"],
+              "path": ["v1", "token"],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{firebaseApiKey}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token (Emulator)",
           "event": [
             {
               "listen": "test",
