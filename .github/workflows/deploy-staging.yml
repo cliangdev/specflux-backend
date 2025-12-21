@@ -1,8 +1,12 @@
 name: Deploy to Staging
 
 on:
-  pull_request:
+  # Trigger after CI workflow completes on main
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
+  # Allow manual deploys
   workflow_dispatch:
 
 env:
@@ -11,10 +15,17 @@ env:
   SERVICE_NAME: specflux-backend
   REGISTRY: us-west1-docker.pkg.dev
 
+# Cancel in-progress deploys for the same branch
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
 jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
+    # Only deploy if CI succeeded (skip if CI failed or was cancelled)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     environment: staging
 
     permissions:
@@ -23,6 +34,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          # For workflow_run, checkout the commit that triggered CI
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -38,14 +52,16 @@ jobs:
 
       - name: Build and Push Container
         run: |
-          IMAGE=${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/specflux/backend:${{ github.sha }}
+          COMMIT_SHA=${{ github.event.workflow_run.head_sha || github.sha }}
+          IMAGE=${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/specflux/backend:${COMMIT_SHA}
           docker build -t $IMAGE .
           docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image ${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/specflux/backend:${{ github.sha }} \
+            --image ${{ env.IMAGE }} \
             --region ${{ env.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
