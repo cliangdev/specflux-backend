@@ -1,9 +1,15 @@
-# Runtime image - uses pre-built JAR from CI pipeline
+# Build stage
+FROM eclipse-temurin:25-jdk AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN apt-get update && apt-get install -y maven && \
+    mvn package -DskipTests
+
+# Runtime stage
 FROM eclipse-temurin:25-jre
 WORKDIR /app
-
-# Copy the pre-built JAR (built by CI and placed in target/)
-COPY target/*.jar app.jar
+COPY --from=builder /app/target/*.jar app.jar
 
 # Cloud Run sets PORT env var
 ENV PORT=8090
