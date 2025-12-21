@@ -49,6 +49,7 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
+            --port 8090 \
             --set-env-vars "SPRING_PROFILES_ACTIVE=staging" \
             --set-secrets "DATABASE_URL=specflux-staging-db-url:latest" \
             --min-instances 0 \
