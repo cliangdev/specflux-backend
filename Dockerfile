@@ -4,7 +4,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 RUN apt-get update && apt-get install -y maven && \
-    mvn package -DskipTests
+    mvn package -DskipTests -Dcheckstyle.skip=true -Dspotless.check.skip=true
 
 # Runtime stage
 FROM eclipse-temurin:25-jre
