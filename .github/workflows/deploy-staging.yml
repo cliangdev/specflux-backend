@@ -28,7 +28,7 @@ jobs:
           cache: maven
 
       - name: Build and Test
-        run: ./mvnw verify -B
+        run: mvn verify -B
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v6
