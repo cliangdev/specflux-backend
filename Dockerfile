@@ -1,15 +1,24 @@
 # Build stage
-FROM eclipse-temurin:25-jdk AS builder
+FROM eclipse-temurin:25-jdk-alpine AS builder
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN apt-get update && apt-get install -y maven && \
+RUN apk add --no-cache maven && \
     mvn package -DskipTests -Dcheckstyle.skip=true -Dspotless.check.skip=true
 
-# Runtime stage
-FROM eclipse-temurin:25-jre
+# Runtime stage - use smallest JRE image
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
+
+# Create non-root user for security
+RUN addgroup -g 1001 appgroup && \
+    adduser -u 1001 -G appgroup -D appuser
+
+# Copy JAR with correct ownership
+COPY --from=builder --chown=appuser:appgroup /app/target/*.jar app.jar
+
+# Switch to non-root user
+USER appuser
 
 # Cloud Run sets PORT env var
 ENV PORT=8090
