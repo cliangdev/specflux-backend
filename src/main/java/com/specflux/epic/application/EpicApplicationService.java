@@ -30,6 +30,7 @@ import com.specflux.prd.domain.Prd;
 import com.specflux.project.domain.Project;
 import com.specflux.release.domain.Release;
 import com.specflux.shared.application.CurrentUserService;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.RefResolver;
 import com.specflux.task.domain.Task;
 import com.specflux.task.domain.TaskRepository;
@@ -134,40 +135,22 @@ public class EpicApplicationService {
     Project project = refResolver.resolveProject(projectRef);
     Epic epic = refResolver.resolveEpic(project, epicRef);
 
-    if (request.getTitle() != null) {
-      epic.setTitle(request.getTitle());
-    }
-    if (request.getDescription() != null) {
-      epic.setDescription(request.getDescription());
-    }
-    if (request.getStatus() != null) {
-      epic.setStatus(epicMapper.toDomainStatus(request.getStatus()));
-    }
-    if (request.getTargetDate() != null) {
-      epic.setTargetDate(request.getTargetDate());
-    }
-    if (request.getPrdRef() != null) {
-      if (request.getPrdRef().isBlank()) {
-        epic.setPrdId(null);
-      } else {
-        Prd prd = refResolver.resolvePrd(project, request.getPrdRef());
-        epic.setPrdId(prd.getId());
-      }
-    }
-    if (request.getPrdFilePath() != null) {
-      epic.setPrdFilePath(request.getPrdFilePath());
-    }
-    if (request.getReleaseRef() != null) {
-      if (request.getReleaseRef().isBlank()) {
-        epic.setReleaseId(null);
-      } else {
-        Release release = refResolver.resolveRelease(project, request.getReleaseRef());
-        epic.setReleaseId(release.getId());
-      }
-    }
-    if (request.getNotes() != null) {
-      epic.setNotes(request.getNotes());
-    }
+    UpdateHelper.applyValue(request.getTitle(), epic::setTitle);
+    UpdateHelper.applyString(request.getDescription(), epic::setDescription);
+    UpdateHelper.applyValue(request.getStatus(), s -> epic.setStatus(epicMapper.toDomainStatus(s)));
+    UpdateHelper.applyValue(request.getTargetDate(), epic::setTargetDate);
+    UpdateHelper.applyRefId(
+        request.getPrdRef(),
+        ref -> refResolver.resolvePrd(project, ref),
+        Prd::getId,
+        epic::setPrdId);
+    UpdateHelper.applyString(request.getPrdFilePath(), epic::setPrdFilePath);
+    UpdateHelper.applyRefId(
+        request.getReleaseRef(),
+        ref -> refResolver.resolveRelease(project, ref),
+        Release::getId,
+        epic::setReleaseId);
+    UpdateHelper.applyString(request.getNotes(), epic::setNotes);
 
     Epic saved = transactionTemplate.execute(status -> epicRepository.save(epic));
     return epicMapper.toDto(saved);

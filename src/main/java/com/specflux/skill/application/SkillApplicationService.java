@@ -11,6 +11,7 @@ import com.specflux.api.generated.model.SkillDto;
 import com.specflux.api.generated.model.SkillListResponseDto;
 import com.specflux.api.generated.model.UpdateSkillRequestDto;
 import com.specflux.project.domain.Project;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceConflictException;
 import com.specflux.shared.interfaces.rest.GlobalExceptionHandler.ResourceNotFoundException;
 import com.specflux.shared.interfaces.rest.RefResolver;
@@ -69,15 +70,9 @@ public class SkillApplicationService {
     refResolver.resolveProject(projectRef);
     Skill skill = resolveSkill(skillRef);
 
-    if (request.getName() != null) {
-      skill.setName(request.getName());
-    }
-    if (request.getDescription() != null) {
-      skill.setDescription(request.getDescription());
-    }
-    if (request.getFolderPath() != null) {
-      skill.setFolderPath(request.getFolderPath());
-    }
+    UpdateHelper.applyValue(request.getName(), skill::setName);
+    UpdateHelper.applyString(request.getDescription(), skill::setDescription);
+    UpdateHelper.applyValue(request.getFolderPath(), skill::setFolderPath);
 
     Skill saved = transactionTemplate.execute(status -> skillRepository.save(skill));
     return SkillMapper.toDto(saved);

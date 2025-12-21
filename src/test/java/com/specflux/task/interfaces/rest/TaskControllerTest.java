@@ -893,4 +893,116 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
                 "task_123"))
         .andExpect(status().isForbidden());
   }
+
+  // ==================== EMPTY-STRING-CLEARS CONVENTION TESTS ====================
+
+  @Test
+  void updateTask_emptyString_shouldClearDescription() throws Exception {
+    Task task = new Task("task_clearDesc", testProject, 1, "TASK-1", "Test Task", testUser);
+    task.setDescription("Original description");
+    taskRepository.save(task);
+
+    // Send empty string to clear description
+    UpdateTaskRequestDto request = new UpdateTaskRequestDto();
+    request.setDescription("");
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_clearDesc")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updateTask_emptyString_shouldClearGithubPrUrl() throws Exception {
+    Task task = new Task("task_clearPr", testProject, 1, "TASK-2", "Test Task", testUser);
+    task.setGithubPrUrl("https://github.com/example/repo/pull/123");
+    taskRepository.save(task);
+
+    // Send empty string to clear githubPrUrl
+    UpdateTaskRequestDto request = new UpdateTaskRequestDto();
+    request.setGithubPrUrl("");
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_clearPr")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.githubPrUrl").doesNotExist());
+  }
+
+  @Test
+  void updateTask_emptyString_shouldClearEpicRef() throws Exception {
+    // Create task with epic assignment
+    Task task = new Task("task_clearEpic", testProject, 1, "TASK-3", "Test Task", testUser);
+    task.setEpic(testEpic);
+    taskRepository.save(task);
+
+    // Verify epic is set
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_clearEpic")
+                .with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.epicId").value(testEpic.getPublicId()));
+
+    // Send empty string to clear epic
+    UpdateTaskRequestDto request = new UpdateTaskRequestDto();
+    request.setEpicRef("");
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_clearEpic")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.epicId").doesNotExist());
+  }
+
+  @Test
+  void updateTask_nullField_shouldNotChangeValue() throws Exception {
+    Task task = new Task("task_nullNoChange", testProject, 1, "TASK-4", "Test Task", testUser);
+    task.setDescription("Original description");
+    task.setGithubPrUrl("https://github.com/example/repo/pull/456");
+    task.setEpic(testEpic);
+    taskRepository.save(task);
+
+    // Send request with only title - other fields should remain unchanged
+    UpdateTaskRequestDto request = new UpdateTaskRequestDto();
+    request.setTitle("Updated Title");
+    // description, githubPrUrl, and epicRef are null (not set)
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/projects/{projectRef}/tasks/{taskRef}",
+                    testProject.getPublicId(),
+                    "task_nullNoChange")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Updated Title"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.githubPrUrl").value("https://github.com/example/repo/pull/456"))
+        .andExpect(jsonPath("$.epicId").value(testEpic.getPublicId()));
+  }
 }

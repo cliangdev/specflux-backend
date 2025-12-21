@@ -214,4 +214,55 @@ class RepositoryControllerTest extends AbstractControllerIntegrationTest {
         .perform(get("/api/projects/{projectRef}/repositories", testProject.getPublicId()))
         .andExpect(status().isForbidden());
   }
+
+  // ==================== EMPTY-STRING-CLEARS CONVENTION TESTS ====================
+
+  @Test
+  void updateRepository_emptyString_shouldClearGitUrl() throws Exception {
+    Repository repo = new Repository("repo_clearGitUrl", testProject, "clear-git-url", "/dev/path");
+    repo.setGitUrl("https://github.com/org/original.git");
+    repositoryRepository.save(repo);
+
+    // Send empty string to clear gitUrl
+    UpdateRepositoryRequestDto request = new UpdateRepositoryRequestDto();
+    request.setGitUrl("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/repositories/{repoRef}",
+                    testProject.getPublicId(),
+                    repo.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.gitUrl").doesNotExist());
+  }
+
+  @Test
+  void updateRepository_nullField_shouldNotChangeValue() throws Exception {
+    Repository repo =
+        new Repository("repo_nullNoChange", testProject, "null-no-change", "/dev/path");
+    repo.setGitUrl("https://github.com/org/original.git");
+    repositoryRepository.save(repo);
+
+    // Send request with only name - other fields should remain unchanged
+    UpdateRepositoryRequestDto request = new UpdateRepositoryRequestDto();
+    request.setName("Updated Name");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/repositories/{repoRef}",
+                    testProject.getPublicId(),
+                    repo.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Updated Name"))
+        .andExpect(jsonPath("$.gitUrl").value("https://github.com/org/original.git"))
+        .andExpect(jsonPath("$.path").value("/dev/path"));
+  }
 }

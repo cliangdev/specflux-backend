@@ -206,4 +206,55 @@ class SkillControllerTest extends AbstractControllerIntegrationTest {
         .perform(get("/api/projects/{projectRef}/skills", testProject.getPublicId()))
         .andExpect(status().isForbidden());
   }
+
+  // ==================== EMPTY-STRING-CLEARS CONVENTION TESTS ====================
+
+  @Test
+  void updateSkill_emptyString_shouldClearDescription() throws Exception {
+    Skill skill = new Skill("skill_clearDesc", testProject, "clear-desc-skill");
+    skill.setDescription("Original description");
+    skillRepository.save(skill);
+
+    // Send empty string to clear description
+    UpdateSkillRequestDto request = new UpdateSkillRequestDto();
+    request.setDescription("");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/skills/{skillRef}",
+                    testProject.getPublicId(),
+                    skill.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.description").doesNotExist());
+  }
+
+  @Test
+  void updateSkill_nullField_shouldNotChangeValue() throws Exception {
+    Skill skill = new Skill("skill_nullNoChange", testProject, "null-no-change-skill");
+    skill.setDescription("Original description");
+    skill.setFolderPath("/original/path");
+    skillRepository.save(skill);
+
+    // Send request with only name - other fields should remain unchanged
+    UpdateSkillRequestDto request = new UpdateSkillRequestDto();
+    request.setName("Updated Name");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/skills/{skillRef}",
+                    testProject.getPublicId(),
+                    skill.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Updated Name"))
+        .andExpect(jsonPath("$.description").value("Original description"))
+        .andExpect(jsonPath("$.folderPath").value("/original/path"));
+  }
 }

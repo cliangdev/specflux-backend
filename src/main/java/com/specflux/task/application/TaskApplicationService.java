@@ -25,6 +25,7 @@ import com.specflux.api.generated.model.UpdateTaskRequestDto;
 import com.specflux.epic.domain.Epic;
 import com.specflux.project.domain.Project;
 import com.specflux.shared.application.CurrentUserService;
+import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.RefResolver;
 import com.specflux.task.domain.Task;
 import com.specflux.task.domain.TaskDependency;
@@ -117,38 +118,19 @@ public class TaskApplicationService {
     Project project = refResolver.resolveProject(projectRef);
     Task task = refResolver.resolveTask(project, taskRef);
 
-    if (request.getTitle() != null) {
-      task.setTitle(request.getTitle());
-    }
-    if (request.getDescription() != null) {
-      task.setDescription(request.getDescription());
-    }
-    if (request.getStatus() != null) {
-      task.setStatus(TaskMapper.toDomainStatus(request.getStatus()));
-    }
-    if (request.getPriority() != null) {
-      task.setPriority(TaskMapper.toDomainPriority(request.getPriority()));
-    }
-    if (request.getRequiresApproval() != null) {
-      task.setRequiresApproval(request.getRequiresApproval());
-    }
-    if (request.getEstimatedDuration() != null) {
-      task.setEstimatedDuration(request.getEstimatedDuration());
-    }
-    if (request.getActualDuration() != null) {
-      task.setActualDuration(request.getActualDuration());
-    }
-    if (request.getGithubPrUrl() != null) {
-      task.setGithubPrUrl(request.getGithubPrUrl());
-    }
-    if (request.getEpicRef() != null) {
-      Epic epic = refResolver.resolveEpicOptional(project, request.getEpicRef());
-      task.setEpic(epic);
-    }
-    if (request.getAssignedToRef() != null) {
-      User assignee = refResolver.resolveUserOptional(request.getAssignedToRef());
-      task.setAssignedTo(assignee);
-    }
+    UpdateHelper.applyValue(request.getTitle(), task::setTitle);
+    UpdateHelper.applyString(request.getDescription(), task::setDescription);
+    UpdateHelper.applyValue(request.getStatus(), s -> task.setStatus(TaskMapper.toDomainStatus(s)));
+    UpdateHelper.applyValue(
+        request.getPriority(), p -> task.setPriority(TaskMapper.toDomainPriority(p)));
+    UpdateHelper.applyValue(request.getRequiresApproval(), task::setRequiresApproval);
+    UpdateHelper.applyValue(request.getEstimatedDuration(), task::setEstimatedDuration);
+    UpdateHelper.applyValue(request.getActualDuration(), task::setActualDuration);
+    UpdateHelper.applyString(request.getGithubPrUrl(), task::setGithubPrUrl);
+    UpdateHelper.applyRef(
+        request.getEpicRef(), ref -> refResolver.resolveEpic(project, ref), task::setEpic);
+    UpdateHelper.applyRef(
+        request.getAssignedToRef(), refResolver::resolveUser, task::setAssignedTo);
 
     Task saved = transactionTemplate.execute(_ -> taskRepository.save(task));
     return TaskMapper.toDto(saved);
