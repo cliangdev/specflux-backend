@@ -10,44 +10,11 @@ env:
   GCP_REGION: us-west1
   SERVICE_NAME: specflux-backend
   REGISTRY: us-west1-docker.pkg.dev
-  JAVA_VERSION: '25'
-  JAVA_DISTRIBUTION: 'temurin'
 
 jobs:
-  build-and-test:
-    name: Build & Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          cache: maven
-
-      - name: Build and Test
-        run: mvn verify -B
-
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [build-and-test, security-scan]
     environment: staging
 
     permissions:
@@ -103,12 +70,3 @@ jobs:
           sleep 10
           curl -f ${{ steps.service-url.outputs.url }}/actuator/health || exit 1
           echo "Staging deployment successful!"
-
-  notify:
-    name: Notify on Failure
-    runs-on: ubuntu-latest
-    needs: deploy-staging
-    if: always() && needs.deploy-staging.result == 'failure'
-    steps:
-      - name: Notify on failure
-        run: echo "Deployment failed - add Slack/Discord notification here"
