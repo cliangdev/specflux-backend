@@ -7,9 +7,9 @@ on:
 
 env:
   GCP_PROJECT_ID: specflux-staging
-  GCP_REGION: us-central1
+  GCP_REGION: us-west1
   SERVICE_NAME: specflux-backend
-  REGISTRY: us-central1-docker.pkg.dev
+  REGISTRY: us-west1-docker.pkg.dev
   JAVA_VERSION: '25'
   JAVA_DISTRIBUTION: 'temurin'
 
