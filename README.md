@@ -4,6 +4,23 @@ API server for [SpecFlux](https://github.com/specflux/specflux) - AI-Powered Mul
 
 [![License: Elastic License 2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](LICENSE)
 
+## API Overview
+
+REST API for managing AI-assisted software development workflows:
+
+| Resource | Description |
+|----------|-------------|
+| **Projects** | Top-level containers grouping epics and tasks |
+| **PRDs** | Product requirements documents with supporting files |
+| **Epics** | Large features with acceptance criteria and task breakdown |
+| **Tasks** | Individual work units with status, dependencies, and criteria |
+| **Releases** | Milestones grouping completed epics |
+| **Repositories** | Git repositories linked to projects |
+| **Skills** | Claude Code skill definitions |
+| **Agents** | Claude Code agent configurations |
+
+All endpoints require Firebase JWT authentication.
+
 ## API-First Development
 
 This project follows **API-first design**. All endpoints are defined in the OpenAPI spec before implementation:
