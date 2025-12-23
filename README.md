@@ -8,8 +8,7 @@ Spring Boot backend for SpecFlux - AI-Powered Multi-Repo Development Orchestrato
 
 - **Java 25** (Temurin recommended)
 - **Maven 3.9+**
-- **PostgreSQL 16+** (or Docker)
-- **Firebase CLI** (for auth emulator)
+- **Docker** (for PostgreSQL and Firebase emulator)
 
 ### Java Installation (asdf)
 
@@ -20,30 +19,11 @@ asdf set java temurin-25.0.1+8.0.LTS
 
 ## Quick Start
 
-### 1. Start PostgreSQL (Docker)
-
-```bash
-docker run -d \
-  --name specflux-postgres \
-  -e POSTGRES_USER=specflux \
-  -e POSTGRES_PASSWORD=specflux \
-  -e POSTGRES_DB=specflux \
-  -p 5432:5432 \
-  postgres:16
-```
-
-### 2. Start Firebase Emulator
-
-```bash
-cd firebase
-firebase emulators:start --only auth
-```
-
-### 3. Run the Application
-
 ```bash
 mvn spring-boot:run
 ```
+
+Docker Compose automatically starts PostgreSQL and Firebase Auth emulator.
 
 The API will be available at **http://localhost:8090**
 
