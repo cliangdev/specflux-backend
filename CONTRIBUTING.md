@@ -2,6 +2,16 @@
 
 Thank you for your interest in contributing! This guide covers the Java/Spring Boot backend.
 
+## API-First Development
+
+This project follows **API-first design**. When adding or modifying endpoints:
+
+1. **Start with the OpenAPI spec** — Define your endpoint in `src/main/resources/openapi/api.yaml`
+2. **Generate interfaces** — Run `mvn compile` to generate controller interfaces
+3. **Implement the interface** — Create or update the controller to implement the generated interface
+
+Never add endpoints directly in code without updating the OpenAPI spec first.
+
 ## Development Setup
 
 ### Prerequisites

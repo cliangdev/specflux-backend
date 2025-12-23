@@ -1,8 +1,18 @@
 # SpecFlux Backend
 
-Spring Boot backend for SpecFlux - AI-Powered Multi-Repo Development Orchestrator.
+API server for [SpecFlux](https://github.com/specflux/specflux) - AI-Powered Multi-Repo Development Orchestrator.
 
 [![License: Elastic License 2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](LICENSE)
+
+## API-First Development
+
+This project follows **API-first design**. All endpoints are defined in the OpenAPI spec before implementation:
+
+1. Define endpoints in `src/main/resources/openapi/api.yaml`
+2. Run `mvn compile` to generate interfaces
+3. Implement the generated interfaces in controllers
+
+See [API Documentation](#api-documentation) for the live spec.
 
 ## Prerequisites
 
