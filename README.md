@@ -2,11 +2,14 @@
 
 Spring Boot backend for SpecFlux - AI-Powered Multi-Repo Development Orchestrator.
 
+[![License: Elastic License 2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](LICENSE)
+
 ## Prerequisites
 
 - **Java 25** (Temurin recommended)
 - **Maven 3.9+**
-- **PostgreSQL 18.1** (for development/production)
+- **PostgreSQL 16+** (or Docker)
+- **Firebase CLI** (for auth emulator)
 
 ### Java Installation (asdf)
 
@@ -15,11 +18,42 @@ asdf install java temurin-25.0.1+8.0.LTS
 asdf set java temurin-25.0.1+8.0.LTS
 ```
 
+## Quick Start
+
+### 1. Start PostgreSQL (Docker)
+
+```bash
+docker run -d \
+  --name specflux-postgres \
+  -e POSTGRES_USER=specflux \
+  -e POSTGRES_PASSWORD=specflux \
+  -e POSTGRES_DB=specflux \
+  -p 5432:5432 \
+  postgres:16
+```
+
+### 2. Start Firebase Emulator
+
+```bash
+cd firebase
+firebase emulators:start --only auth
+```
+
+### 3. Run the Application
+
+```bash
+mvn spring-boot:run
+```
+
+The API will be available at **http://localhost:8090**
+
 ## Tech Stack
 
 - Spring Boot 4.0.0
-- Maven
+- Java 25
 - PostgreSQL
+- Firebase Authentication
+- Maven
 
 ## Project Structure
 
@@ -53,7 +87,7 @@ Each bounded context contains:
     └── rest/                     # REST controllers
 ```
 
-## Getting Started
+## Development
 
 ### Build
 
@@ -61,7 +95,7 @@ Each bounded context contains:
 # Compile
 mvn clean compile
 
-# Run tests
+# Run tests (uses Testcontainers)
 mvn test
 
 # Package
@@ -80,6 +114,8 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
 ### Code Formatting
 
+This project uses Spotless with Google Java Format.
+
 ```bash
 # Check formatting
 mvn spotless:check
@@ -88,26 +124,70 @@ mvn spotless:check
 mvn spotless:apply
 ```
 
-## Profiles
+## API Documentation
+
+When running in `dev` profile:
+- **Swagger UI:** http://localhost:8090/swagger-ui.html
+- **OpenAPI JSON:** http://localhost:8090/api-docs
+
+## Configuration
+
+### Profiles
 
 | Profile | Description | Usage |
 |---------|-------------|-------|
 | `dev` | Local development | Default profile, debug logging |
 | `test` | Testing | Used by test classes, Testcontainers |
-| `prod` | Production | Minimal logging, swagger disabled |
+| `prod` | Production | Minimal logging, Swagger disabled |
 
-## API Documentation
-
-When running in `dev` profile:
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- OpenAPI JSON: http://localhost:8080/api-docs
-
-## Environment Variables
+### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SERVER_PORT` | Server port | 8080 |
+| `SERVER_PORT` | Server port | 8090 |
 | `SPRING_PROFILES_ACTIVE` | Active profile | dev |
-| `DATABASE_URL` | PostgreSQL URL (prod) | - |
-| `DATABASE_USERNAME` | Database username (prod) | - |
-| `DATABASE_PASSWORD` | Database password (prod) | - |
+| `DATABASE_URL` | PostgreSQL URL | - |
+| `DATABASE_USERNAME` | Database username | - |
+| `DATABASE_PASSWORD` | Database password | - |
+| `FIREBASE_PROJECT_ID` | Firebase project ID | - |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to Firebase service account JSON | - |
+
+## Troubleshooting
+
+### Port already in use
+
+```bash
+# Find process using port 8090
+lsof -i :8090
+
+# Kill it
+kill -9 <PID>
+```
+
+### Database connection issues
+
+1. Ensure PostgreSQL is running: `docker ps | grep postgres`
+2. Check connection: `psql -h localhost -U specflux -d specflux`
+3. Verify `application-dev.yml` has correct credentials
+
+### Firebase emulator not connecting
+
+1. Ensure emulator is running: `firebase emulators:start --only auth`
+2. Check emulator UI at http://localhost:4000
+3. Verify `FIREBASE_AUTH_EMULATOR_HOST=localhost:9099` is set
+
+### Tests failing with Testcontainers
+
+1. Ensure Docker is running
+2. Check Docker has sufficient resources
+3. Try `docker system prune` to clean up old containers
+
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Community guidelines
+- [SECURITY.md](SECURITY.md) — Report vulnerabilities
+
+## License
+
+[Elastic License 2.0](LICENSE) — Free for personal use. Commercial use restricted.

@@ -78,4 +78,10 @@ application-local.properties
 firebase/.cache/
 firebase/data/
 firebase/firebase-export-*/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+
+# Scripts (if any local scripts)
 scripts/
