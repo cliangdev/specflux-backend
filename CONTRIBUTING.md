@@ -8,8 +8,7 @@ Thank you for your interest in contributing! This guide covers the Java/Spring B
 
 - **Java 25** (Temurin recommended)
 - **Maven 3.9+**
-- **Docker** (for PostgreSQL and tests)
-- **Firebase CLI** (for auth emulator)
+- **Docker** (for PostgreSQL and Firebase emulator)
 
 ### Getting Started
 
@@ -18,21 +17,11 @@ Thank you for your interest in contributing! This guide covers the Java/Spring B
 git clone https://github.com/specflux/specflux-backend.git
 cd specflux-backend
 
-# Start PostgreSQL
-docker run -d \
-  --name specflux-postgres \
-  -e POSTGRES_USER=specflux \
-  -e POSTGRES_PASSWORD=specflux \
-  -e POSTGRES_DB=specflux \
-  -p 5432:5432 \
-  postgres:16
-
-# Start Firebase Emulator
-cd firebase && firebase emulators:start --only auth
-
-# Run the application
+# Run the application (Docker Compose starts PostgreSQL and Firebase automatically)
 mvn spring-boot:run
 ```
+
+Docker Compose is configured to automatically start PostgreSQL and Firebase Auth emulator when you run the application.
 
 ### Running Tests
 
