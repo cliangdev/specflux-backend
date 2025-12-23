@@ -8,11 +8,11 @@ API server for [SpecFlux](https://github.com/specflux/specflux) - AI-Powered Mul
 
 This project follows **API-first design**. All endpoints are defined in the OpenAPI spec before implementation:
 
-1. Define endpoints in `src/main/resources/openapi/api.yaml`
-2. Run `mvn compile` to generate interfaces
+1. Define endpoints in [`src/main/resources/openapi/api.yaml`](src/main/resources/openapi/api.yaml)
+2. Run `mvn compile` to generate controller interfaces
 3. Implement the generated interfaces in controllers
 
-See [API Documentation](#api-documentation) for the live spec.
+When running locally, view the interactive spec at http://localhost:8090/swagger-ui.html
 
 ## Prerequisites
 
@@ -113,12 +113,6 @@ mvn spotless:check
 # Apply formatting
 mvn spotless:apply
 ```
-
-## API Documentation
-
-When running in `dev` profile:
-- **Swagger UI:** http://localhost:8090/swagger-ui.html
-- **OpenAPI JSON:** http://localhost:8090/api-docs
 
 ## Configuration
 

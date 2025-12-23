@@ -6,9 +6,11 @@ Thank you for your interest in contributing! This guide covers the Java/Spring B
 
 This project follows **API-first design**. When adding or modifying endpoints:
 
-1. **Start with the OpenAPI spec** — Define your endpoint in `src/main/resources/openapi/api.yaml`
+1. **Start with the OpenAPI spec** — Define your endpoint in [`src/main/resources/openapi/api.yaml`](src/main/resources/openapi/api.yaml)
 2. **Generate interfaces** — Run `mvn compile` to generate controller interfaces
 3. **Implement the interface** — Create or update the controller to implement the generated interface
+
+View the interactive spec at http://localhost:8090/swagger-ui.html when running locally.
 
 Never add endpoints directly in code without updating the OpenAPI spec first.
 
