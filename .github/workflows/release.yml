@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'  # Matches v1.0.0, v1.0.0-preview, v1.0.0-rc.1, etc.
+
+env:
+  JAVA_VERSION: '25'
+  JAVA_DISTRIBUTION: 'temurin'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$TAG" >> $GITHUB_OUTPUT
+
+          # Check if it's a prerelease (contains -, e.g., v1.0.0-preview)
+          if [[ "$TAG" == *"-"* ]]; then
+            echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+          else
+            echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Release version: $TAG"
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Run tests
+        run: mvn verify -B
+
+      - name: Validate OpenAPI spec exists
+        run: |
+          if [ ! -f "src/main/resources/openapi/api.yaml" ]; then
+            echo "Error: OpenAPI spec not found"
+            exit 1
+          fi
+
+      - name: Prepare release artifacts
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          mkdir -p release-artifacts
+
+          cp src/main/resources/openapi/api.yaml release-artifacts/api.yaml
+          cp src/main/resources/openapi/api.yaml "release-artifacts/api-${VERSION}.yaml"
+
+          cd release-artifacts
+          sha256sum *.yaml > checksums.txt
+
+          echo "Release artifacts:"
+          ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
+          prerelease: ${{ steps.version.outputs.IS_PRERELEASE == 'true' }}
+          files: release-artifacts/*
+          body: |
+            ## API Specification
+
+            Sync with frontend:
+            ```bash
+            npm run sync:api ${{ steps.version.outputs.VERSION }}
+            npm run generate:client
+            ```
+
+            ### Checksums (SHA256)
+            See `checksums.txt` for verification.
