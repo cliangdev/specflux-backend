@@ -136,14 +136,17 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void handleGithubCallback_success_shouldRedirectToFrontendWithSuccess() throws Exception {
     GithubInstallation installation = createTestInstallation();
-    when(githubService.exchangeCodeForTokens("test-code")).thenReturn(installation);
+    when(githubService.exchangeCodeForTokens("test-code", "fb_github")).thenReturn(installation);
+
+    // State with firebaseUid but no redirect_uri (web flow)
+    String state = buildOAuthState(null, "fb_github");
 
     mockMvc
         .perform(
             get("/api/github/callback")
                 .param("code", "test-code")
                 .param("installation_id", "12345")
-                .with(user("user")))
+                .param("state", state))
         .andExpect(status().isFound())
         .andExpect(
             header().string("Location", org.hamcrest.Matchers.containsString("github=success")));
@@ -151,15 +154,30 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
 
   @Test
   void handleGithubCallback_failure_shouldRedirectToFrontendWithError() throws Exception {
-    when(githubService.exchangeCodeForTokens("invalid-code"))
+    when(githubService.exchangeCodeForTokens("invalid-code", "fb_github"))
         .thenThrow(new RuntimeException("Token exchange failed"));
+
+    String state = buildOAuthState(null, "fb_github");
 
     mockMvc
         .perform(
             get("/api/github/callback")
                 .param("code", "invalid-code")
                 .param("installation_id", "12345")
-                .with(user("user")))
+                .param("state", state))
+        .andExpect(status().isFound())
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.containsString("github=error")));
+  }
+
+  @Test
+  void handleGithubCallback_withoutState_shouldRedirectWithError() throws Exception {
+    // Without state (missing firebaseUid), should redirect with error
+    mockMvc
+        .perform(
+            get("/api/github/callback")
+                .param("code", "test-code")
+                .param("installation_id", "12345"))
         .andExpect(status().isFound())
         .andExpect(
             header().string("Location", org.hamcrest.Matchers.containsString("github=error")));
@@ -168,18 +186,18 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void handleGithubCallback_withState_shouldRedirectToClientUri() throws Exception {
     GithubInstallation installation = createTestInstallation();
-    when(githubService.exchangeCodeForTokens("test-code")).thenReturn(installation);
+    // Mock service with firebaseUid parameter (callback is unauthenticated, uses UID from state)
+    when(githubService.exchangeCodeForTokens("test-code", "fb_github")).thenReturn(installation);
 
-    // Build state with redirect_uri (same format as controller)
-    String state = buildOAuthState("http://localhost:8765");
+    // Build state with redirect_uri and firebaseUid (same format as controller)
+    String state = buildOAuthState("http://localhost:8765", "fb_github");
 
     mockMvc
         .perform(
             get("/api/github/callback")
                 .param("code", "test-code")
                 .param("installation_id", "12345")
-                .param("state", state)
-                .with(user("user")))
+                .param("state", state))
         .andExpect(status().isFound())
         .andExpect(
             header().string("Location", org.hamcrest.Matchers.startsWith("http://localhost:8765")))
@@ -192,18 +210,17 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void handleGithubCallback_withState_failure_shouldRedirectToClientUriWithError()
       throws Exception {
-    when(githubService.exchangeCodeForTokens("invalid-code"))
+    when(githubService.exchangeCodeForTokens("invalid-code", "fb_github"))
         .thenThrow(new RuntimeException("Token exchange failed"));
 
-    String state = buildOAuthState("http://localhost:8765");
+    String state = buildOAuthState("http://localhost:8765", "fb_github");
 
     mockMvc
         .perform(
             get("/api/github/callback")
                 .param("code", "invalid-code")
                 .param("installation_id", "12345")
-                .param("state", state)
-                .with(user("user")))
+                .param("state", state))
         .andExpect(status().isFound())
         .andExpect(
             header().string("Location", org.hamcrest.Matchers.startsWith("http://localhost:8765")))
@@ -213,8 +230,10 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
 
   // ==================== Helper Methods ====================
 
-  private String buildOAuthState(String redirectUri) {
-    String json = "{\"redirectUri\":\"" + redirectUri + "\"}";
+  private String buildOAuthState(String redirectUri, String firebaseUid) {
+    String redirectUriJson = redirectUri != null ? "\"" + redirectUri + "\"" : "null";
+    String json =
+        "{\"redirectUri\":" + redirectUriJson + ",\"firebaseUid\":\"" + firebaseUid + "\"}";
     return Base64.getUrlEncoder()
         .withoutPadding()
         .encodeToString(json.getBytes(StandardCharsets.UTF_8));

@@ -17,6 +17,7 @@ import com.specflux.github.infrastructure.GithubApiClient.TokenResponse;
 import com.specflux.github.infrastructure.GithubApiClient.UserProfile;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.user.domain.User;
+import com.specflux.user.domain.UserRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -35,31 +36,57 @@ public class GithubService {
 
   private final GithubApiClient githubApiClient;
   private final GithubInstallationRepository installationRepository;
+  private final UserRepository userRepository;
   private final CurrentUserService currentUserService;
   private final TransactionTemplate transactionTemplate;
 
   /**
    * Exchanges an OAuth authorization code for tokens and creates/updates the GitHub installation.
    *
+   * <p>This overload is used when calling from an authenticated context.
+   *
    * @param code the authorization code from OAuth callback
    * @return the created or updated GitHub installation
    * @throws GithubApiException if token exchange or user profile fetch fails
    */
   public GithubInstallation exchangeCodeForTokens(String code) {
+    String firebaseUid = currentUserService.getCurrentFirebaseUid();
+    return exchangeCodeForTokens(code, firebaseUid);
+  }
+
+  /**
+   * Exchanges an OAuth authorization code for tokens and creates/updates the GitHub installation.
+   *
+   * <p>This overload is used when calling from an unauthenticated context (OAuth callback) where
+   * the Firebase UID is passed via the OAuth state parameter.
+   *
+   * @param code the authorization code from OAuth callback
+   * @param firebaseUid the Firebase UID of the user to associate the installation with
+   * @return the created or updated GitHub installation
+   * @throws GithubApiException if token exchange or user profile fetch fails
+   * @throws EntityNotFoundException if no user exists with the given Firebase UID
+   */
+  public GithubInstallation exchangeCodeForTokens(String code, String firebaseUid) {
+    // Look up user by Firebase UID (outside transaction)
+    User user =
+        userRepository
+            .findByFirebaseUid(firebaseUid)
+            .orElseThrow(
+                () ->
+                    new EntityNotFoundException("User not found for Firebase UID: " + firebaseUid));
+    Long userId = user.getId();
+
+    // Exchange code for tokens (external API call - must be outside transaction)
+    TokenResponse tokenResponse = githubApiClient.exchangeCodeForTokens(code);
+
+    // Get user profile (external API call - must be outside transaction)
+    UserProfile userProfile = githubApiClient.getAuthenticatedUser(tokenResponse.getAccessToken());
+
+    // Only wrap database operations in transaction
     return transactionTemplate.execute(
         status -> {
-          User currentUser = currentUserService.getOrCreateCurrentUser();
-
-          // Exchange code for tokens
-          TokenResponse tokenResponse = githubApiClient.exchangeCodeForTokens(code);
-
-          // Get user profile to extract GitHub username and installation ID
-          UserProfile userProfile =
-              githubApiClient.getAuthenticatedUser(tokenResponse.getAccessToken());
-
-          // Check if installation already exists for this user
           Optional<GithubInstallation> existingInstallation =
-              installationRepository.findByUserId(currentUser.getId());
+              installationRepository.findByUserId(userId);
 
           GithubInstallation installation;
           if (existingInstallation.isPresent()) {
@@ -71,21 +98,21 @@ public class GithubService {
                 tokenResponse.getRefreshToken(),
                 tokenResponse.getRefreshTokenExpiresAt());
             installation.setGithubUsername(userProfile.getLogin());
-            log.info("Updated GitHub installation for user {}", currentUser.getId());
+            log.info("Updated GitHub installation for user {}", userId);
           } else {
             // Create new installation
             String publicId = generatePublicId("ghi");
             installation =
                 new GithubInstallation(
                     publicId,
-                    currentUser.getId(),
+                    userId,
                     userProfile.getId(),
                     tokenResponse.getAccessToken(),
                     tokenResponse.getAccessTokenExpiresAt(),
                     tokenResponse.getRefreshToken(),
                     tokenResponse.getRefreshTokenExpiresAt(),
                     userProfile.getLogin());
-            log.info("Created new GitHub installation for user {}", currentUser.getId());
+            log.info("Created new GitHub installation for user {}", userId);
           }
 
           return installationRepository.save(installation);
