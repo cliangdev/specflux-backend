@@ -77,6 +77,10 @@ tags:
     description: |
       MCP Server management endpoints.
       MCP servers are Model Context Protocol servers configured in .claude/.mcp.json.
+  - name: GitHub
+    description: |
+      GitHub App integration endpoints.
+      Handles OAuth installation flow and repository creation for project cloud sync.
 
 paths:
   # ==================== PROJECTS ====================
@@ -1853,6 +1857,113 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # ==================== GITHUB ====================
+  /api/github/install:
+    get:
+      operationId: initiateGithubInstall
+      summary: Initiate GitHub App installation
+      description: |
+        Redirects user to GitHub OAuth flow to install the SpecFlux GitHub App.
+        For desktop apps, pass redirect_uri to receive the callback on a local server.
+      tags: [GitHub]
+      security: []  # No auth required for initial redirect
+      parameters:
+        - name: redirect_uri
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: |
+            URL to redirect to after OAuth completes. Used by desktop apps to
+            redirect back to a local server (e.g., http://localhost:8765).
+            If not provided, redirects to the configured frontend URL.
+      responses:
+        '302':
+          description: Redirect to GitHub OAuth authorization page
+          headers:
+            Location:
+              schema:
+                type: string
+                example: https://github.com/apps/specflux-sync/installations/new
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github/callback:
+    get:
+      operationId: handleGithubCallback
+      summary: Handle GitHub OAuth callback
+      description: Processes the OAuth callback from GitHub, exchanges code for tokens, and stores installation
+      tags: [GitHub]
+      security: []  # Auth happens via code exchange
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth authorization code from GitHub
+        - name: installation_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: GitHub installation ID
+        - name: setup_action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Setup action (install/update)
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: CSRF protection state parameter
+      responses:
+        '302':
+          description: Redirect to frontend with success/error status
+          headers:
+            Location:
+              schema:
+                type: string
+                example: https://app.specflux.ai/settings/integrations?github=success
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github/status:
+    get:
+      operationId: getGithubInstallationStatus
+      summary: Get GitHub installation status
+      description: Check if the current user has installed the GitHub App
+      tags: [GitHub]
+      responses:
+        '200':
+          description: GitHub installation status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GithubInstallationStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/github/disconnect:
+    delete:
+      operationId: disconnectGithubInstallation
+      summary: Disconnect GitHub installation
+      description: Removes the GitHub App installation for the current user
+      tags: [GitHub]
+      responses:
+        '204':
+          description: GitHub installation disconnected successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1918,6 +2029,13 @@ components:
 
     Conflict:
       description: Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
       content:
         application/json:
           schema:
@@ -3120,3 +3238,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/McpServer'
+
+    # GitHub
+    GithubInstallationStatus:
+      type: object
+      required: [installed]
+      properties:
+        installed:
+          type: boolean
+          description: Whether the user has installed the GitHub App
+          example: true
+        githubUsername:
+          type: string
+          nullable: true
+          description: GitHub username (only present if installed)
+          example: octocat
+        connectedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the GitHub App was installed
+          example: '2024-01-15T10:30:00Z'

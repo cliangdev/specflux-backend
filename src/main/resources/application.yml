@@ -45,3 +45,16 @@ firebase:
   emulator:
     enabled: ${FIREBASE_EMULATOR_ENABLED:false}
     host: ${FIREBASE_AUTH_EMULATOR_HOST:localhost:9099}
+
+# GitHub App Integration
+github:
+  app:
+    id: ${GITHUB_APP_ID:}
+    client-id: ${GITHUB_CLIENT_ID:}
+    client-secret: ${GITHUB_CLIENT_SECRET:}
+    redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8090/api/github/callback}
+
+# SpecFlux Frontend
+specflux:
+  frontend:
+    url: ${SPECFLUX_FRONTEND_URL:http://localhost:5173}
