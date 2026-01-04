@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.specflux.api.generated.GitHubApi;
+import com.specflux.api.generated.model.GithubInstallResponseDto;
 import com.specflux.api.generated.model.GithubInstallationStatusDto;
 import com.specflux.github.application.GithubService;
 import com.specflux.github.domain.GithubInstallation;
@@ -48,21 +49,18 @@ public class GithubController implements GitHubApi {
   /**
    * {@inheritDoc}
    *
-   * <p>Initiates GitHub App installation by redirecting to GitHub OAuth. For desktop apps, accepts
+   * <p>Returns the GitHub OAuth URL for the client to open in a browser. For desktop apps, accepts
    * a redirect_uri to redirect back to a local server after OAuth completes.
    */
   @Override
-  public ResponseEntity<Void> initiateGithubInstall(URI redirectUri) {
+  public ResponseEntity<GithubInstallResponseDto> initiateGithubInstall(URI redirectUri) {
     if (!githubAppConfig.isConfigured()) {
       log.error("GitHub App not configured");
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
-    // Get current user's public ID to include in OAuth state (callback is unauthenticated)
     User currentUser = currentUserService.getOrCreateCurrentUser();
     String userPublicId = currentUser.getPublicId();
-
-    // Build state parameter with redirect_uri and user public ID for callback
     String state = buildOAuthState(redirectUri, userPublicId);
 
     String authUrl =
@@ -72,8 +70,8 @@ public class GithubController implements GitHubApi {
             githubAppConfig.getRedirectUri(),
             URLEncoder.encode(state, StandardCharsets.UTF_8));
 
-    log.info("Redirecting to GitHub OAuth (desktop redirect: {})", redirectUri != null);
-    return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(authUrl)).build();
+    log.info("Returning GitHub OAuth URL (desktop redirect: {})", redirectUri != null);
+    return ResponseEntity.ok(new GithubInstallResponseDto(URI.create(authUrl)));
   }
 
   /**

@@ -87,24 +87,22 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   // ==================== GET /api/github/install ====================
 
   @Test
-  void initiateGithubInstall_whenConfigured_shouldRedirectToGithub() throws Exception {
+  void initiateGithubInstall_whenConfigured_shouldReturnAuthUrl() throws Exception {
     when(githubAppConfig.isConfigured()).thenReturn(true);
     when(githubAppConfig.getClientId()).thenReturn("test-client-id");
     when(githubAppConfig.getRedirectUri()).thenReturn("http://localhost:8090/api/github/callback");
 
     mockMvc
         .perform(get("/api/github/install").with(user("user")))
-        .andExpect(status().isFound())
+        .andExpect(status().isOk())
         .andExpect(
-            header()
-                .string(
-                    "Location",
+            jsonPath("$.authUrl")
+                .value(
                     org.hamcrest.Matchers.containsString(
                         "https://github.com/login/oauth/authorize")))
         .andExpect(
-            header()
-                .string(
-                    "Location", org.hamcrest.Matchers.containsString("client_id=test-client-id")));
+            jsonPath("$.authUrl")
+                .value(org.hamcrest.Matchers.containsString("client_id=test-client-id")));
   }
 
   @Test
@@ -117,7 +115,7 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   }
 
   @Test
-  void initiateGithubInstall_withRedirectUri_shouldIncludeInState() throws Exception {
+  void initiateGithubInstall_withRedirectUri_shouldIncludeStateInAuthUrl() throws Exception {
     when(githubAppConfig.isConfigured()).thenReturn(true);
     when(githubAppConfig.getClientId()).thenReturn("test-client-id");
     when(githubAppConfig.getRedirectUri()).thenReturn("http://localhost:8090/api/github/callback");
@@ -127,8 +125,13 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
             get("/api/github/install")
                 .param("redirect_uri", "http://localhost:8765")
                 .with(user("user")))
-        .andExpect(status().isFound())
-        .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("state=")));
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.authUrl").value(org.hamcrest.Matchers.containsString("state=")));
+  }
+
+  @Test
+  void initiateGithubInstall_withoutAuth_shouldReturn403() throws Exception {
+    mockMvc.perform(get("/api/github/install")).andExpect(status().isForbidden());
   }
 
   // ==================== GET /api/github/callback ====================

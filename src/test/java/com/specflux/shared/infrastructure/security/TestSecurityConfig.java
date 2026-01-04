@@ -49,8 +49,8 @@ public class TestSecurityConfig {
                     // OpenAPI / Swagger endpoints
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                     .permitAll()
-                    // GitHub OAuth flow (initiated from browser, no auth token available)
-                    .requestMatchers("/api/github/install", "/api/github/callback")
+                    // GitHub OAuth callback (receives unauthenticated redirect from GitHub)
+                    .requestMatchers("/api/github/callback")
                     .permitAll()
                     // All other requests require authentication
                     .anyRequest()
