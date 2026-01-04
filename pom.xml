@@ -24,6 +24,7 @@
         <openapi-generator.version>7.18.0</openapi-generator.version>
         <spotless.version>3.1.0</spotless.version>
         <testcontainers.version>2.0.3</testcontainers.version>
+        <archunit.version>1.4.1</archunit.version>
     </properties>
 
     <dependencyManagement>
@@ -92,6 +93,14 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ArchUnit for architecture tests -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>${archunit.version}</version>
             <scope>test</scope>
         </dependency>
 

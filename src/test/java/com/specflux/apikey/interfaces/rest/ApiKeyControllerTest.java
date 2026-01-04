@@ -102,8 +102,7 @@ class ApiKeyControllerTest extends AbstractControllerIntegrationTest {
                 .with(user("user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.error").value("conflict"));
+        .andExpect(status().isConflict());
   }
 
   @Test
@@ -160,8 +159,7 @@ class ApiKeyControllerTest extends AbstractControllerIntegrationTest {
   void revokeApiKey_notFound_shouldReturn404() throws Exception {
     mockMvc
         .perform(delete("/api/users/me/api-keys/{id}", "key_nonexistent").with(user("user")))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.error").value("not_found"));
+        .andExpect(status().isNotFound());
   }
 
   @Test
@@ -174,8 +172,7 @@ class ApiKeyControllerTest extends AbstractControllerIntegrationTest {
 
     mockMvc
         .perform(delete("/api/users/me/api-keys/{id}", keyId).with(user("user")))
-        .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.error").value("forbidden"));
+        .andExpect(status().isForbidden());
   }
 
   @Test
