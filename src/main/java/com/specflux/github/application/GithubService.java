@@ -67,7 +67,6 @@ public class GithubService {
    * @throws EntityNotFoundException if no user exists with the given public ID
    */
   public GithubInstallation exchangeCodeForTokens(String code, String userPublicId) {
-    // Look up user by public ID (outside transaction)
     User user =
         userRepository
             .findByPublicId(userPublicId)
@@ -75,13 +74,10 @@ public class GithubService {
                 () -> new EntityNotFoundException("User not found for public ID: " + userPublicId));
     Long userId = user.getId();
 
-    // Exchange code for tokens (external API call - must be outside transaction)
+    // External API calls must be outside transaction to avoid connection pool exhaustion
     TokenResponse tokenResponse = githubApiClient.exchangeCodeForTokens(code);
-
-    // Get user profile (external API call - must be outside transaction)
     UserProfile userProfile = githubApiClient.getAuthenticatedUser(tokenResponse.getAccessToken());
 
-    // Only wrap database operations in transaction
     return transactionTemplate.execute(
         status -> {
           Optional<GithubInstallation> existingInstallation =
@@ -89,7 +85,6 @@ public class GithubService {
 
           GithubInstallation installation;
           if (existingInstallation.isPresent()) {
-            // Update existing installation
             installation = existingInstallation.get();
             installation.updateTokens(
                 tokenResponse.getAccessToken(),
@@ -99,7 +94,6 @@ public class GithubService {
             installation.setGithubUsername(userProfile.getLogin());
             log.info("Updated GitHub installation for user {}", userId);
           } else {
-            // Create new installation
             String publicId = generatePublicId("ghi");
             installation =
                 new GithubInstallation(
@@ -133,12 +127,10 @@ public class GithubService {
       return installation;
     }
 
-    // External API call - must be outside transaction
     log.info("Refreshing access token for installation {}", installation.getPublicId());
     TokenResponse tokenResponse =
         githubApiClient.refreshAccessToken(installation.getRefreshToken());
 
-    // Only wrap database update in transaction
     return transactionTemplate.execute(
         status -> {
           installation.updateTokens(
@@ -163,7 +155,6 @@ public class GithubService {
    */
   public Repository createRepository(
       GithubInstallation installation, String repoName, String description, boolean isPrivate) {
-    // Refresh token if needed
     GithubInstallation freshInstallation = refreshAccessToken(installation);
 
     log.info(

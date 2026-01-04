@@ -178,6 +178,27 @@ public class TaskController implements TasksApi {
 }
 ```
 
+## Code Style
+
+**Avoid unnecessary inline comments.** Comments should explain "why", not "what". Self-explanatory code doesn't need comments:
+
+```java
+// BAD - states the obvious
+// Look up user by public ID
+User user = userRepository.findByPublicId(publicId);
+
+// Create new installation
+installation = new GithubInstallation(...);
+
+// GOOD - no comment needed, code is self-evident
+User user = userRepository.findByPublicId(publicId);
+installation = new GithubInstallation(...);
+
+// GOOD - explains why (architectural decision)
+// External API calls must be outside transaction to avoid connection pool exhaustion
+TokenResponse tokens = externalApi.getTokens(code);
+```
+
 ## Database Migrations
 
 Location: `src/main/resources/db/migration/`
