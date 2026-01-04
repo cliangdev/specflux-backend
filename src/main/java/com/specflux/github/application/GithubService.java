@@ -50,30 +50,29 @@ public class GithubService {
    * @throws GithubApiException if token exchange or user profile fetch fails
    */
   public GithubInstallation exchangeCodeForTokens(String code) {
-    String firebaseUid = currentUserService.getCurrentFirebaseUid();
-    return exchangeCodeForTokens(code, firebaseUid);
+    User currentUser = currentUserService.getOrCreateCurrentUser();
+    return exchangeCodeForTokens(code, currentUser.getPublicId());
   }
 
   /**
    * Exchanges an OAuth authorization code for tokens and creates/updates the GitHub installation.
    *
    * <p>This overload is used when calling from an unauthenticated context (OAuth callback) where
-   * the Firebase UID is passed via the OAuth state parameter.
+   * the user public ID is passed via the OAuth state parameter.
    *
    * @param code the authorization code from OAuth callback
-   * @param firebaseUid the Firebase UID of the user to associate the installation with
+   * @param userPublicId the public ID of the user to associate the installation with
    * @return the created or updated GitHub installation
    * @throws GithubApiException if token exchange or user profile fetch fails
-   * @throws EntityNotFoundException if no user exists with the given Firebase UID
+   * @throws EntityNotFoundException if no user exists with the given public ID
    */
-  public GithubInstallation exchangeCodeForTokens(String code, String firebaseUid) {
-    // Look up user by Firebase UID (outside transaction)
+  public GithubInstallation exchangeCodeForTokens(String code, String userPublicId) {
+    // Look up user by public ID (outside transaction)
     User user =
         userRepository
-            .findByFirebaseUid(firebaseUid)
+            .findByPublicId(userPublicId)
             .orElseThrow(
-                () ->
-                    new EntityNotFoundException("User not found for Firebase UID: " + firebaseUid));
+                () -> new EntityNotFoundException("User not found for public ID: " + userPublicId));
     Long userId = user.getId();
 
     // Exchange code for tokens (external API call - must be outside transaction)
@@ -134,12 +133,14 @@ public class GithubService {
       return installation;
     }
 
+    // External API call - must be outside transaction
+    log.info("Refreshing access token for installation {}", installation.getPublicId());
+    TokenResponse tokenResponse =
+        githubApiClient.refreshAccessToken(installation.getRefreshToken());
+
+    // Only wrap database update in transaction
     return transactionTemplate.execute(
         status -> {
-          log.info("Refreshing access token for installation {}", installation.getPublicId());
-          TokenResponse tokenResponse =
-              githubApiClient.refreshAccessToken(installation.getRefreshToken());
-
           installation.updateTokens(
               tokenResponse.getAccessToken(),
               tokenResponse.getAccessTokenExpiresAt(),

@@ -136,10 +136,10 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void handleGithubCallback_success_shouldRedirectToFrontendWithSuccess() throws Exception {
     GithubInstallation installation = createTestInstallation();
-    when(githubService.exchangeCodeForTokens("test-code", "fb_github")).thenReturn(installation);
+    when(githubService.exchangeCodeForTokens("test-code", "user_github")).thenReturn(installation);
 
-    // State with firebaseUid but no redirect_uri (web flow)
-    String state = buildOAuthState(null, "fb_github");
+    // State with userPublicId but no redirect_uri (web flow)
+    String state = buildOAuthState(null, "user_github");
 
     mockMvc
         .perform(
@@ -154,10 +154,10 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
 
   @Test
   void handleGithubCallback_failure_shouldRedirectToFrontendWithError() throws Exception {
-    when(githubService.exchangeCodeForTokens("invalid-code", "fb_github"))
+    when(githubService.exchangeCodeForTokens("invalid-code", "user_github"))
         .thenThrow(new RuntimeException("Token exchange failed"));
 
-    String state = buildOAuthState(null, "fb_github");
+    String state = buildOAuthState(null, "user_github");
 
     mockMvc
         .perform(
@@ -172,7 +172,7 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
 
   @Test
   void handleGithubCallback_withoutState_shouldRedirectWithError() throws Exception {
-    // Without state (missing firebaseUid), should redirect with error
+    // Without state (missing userPublicId), should redirect with error
     mockMvc
         .perform(
             get("/api/github/callback")
@@ -186,11 +186,11 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void handleGithubCallback_withState_shouldRedirectToClientUri() throws Exception {
     GithubInstallation installation = createTestInstallation();
-    // Mock service with firebaseUid parameter (callback is unauthenticated, uses UID from state)
-    when(githubService.exchangeCodeForTokens("test-code", "fb_github")).thenReturn(installation);
+    // Mock service with userPublicId parameter (callback is unauthenticated, uses UID from state)
+    when(githubService.exchangeCodeForTokens("test-code", "user_github")).thenReturn(installation);
 
-    // Build state with redirect_uri and firebaseUid (same format as controller)
-    String state = buildOAuthState("http://localhost:8765", "fb_github");
+    // Build state with redirect_uri and userPublicId (same format as controller)
+    String state = buildOAuthState("http://localhost:8765", "user_github");
 
     mockMvc
         .perform(
@@ -210,10 +210,10 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
   @Test
   void handleGithubCallback_withState_failure_shouldRedirectToClientUriWithError()
       throws Exception {
-    when(githubService.exchangeCodeForTokens("invalid-code", "fb_github"))
+    when(githubService.exchangeCodeForTokens("invalid-code", "user_github"))
         .thenThrow(new RuntimeException("Token exchange failed"));
 
-    String state = buildOAuthState("http://localhost:8765", "fb_github");
+    String state = buildOAuthState("http://localhost:8765", "user_github");
 
     mockMvc
         .perform(
@@ -230,10 +230,10 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
 
   // ==================== Helper Methods ====================
 
-  private String buildOAuthState(String redirectUri, String firebaseUid) {
+  private String buildOAuthState(String redirectUri, String userPublicId) {
     String redirectUriJson = redirectUri != null ? "\"" + redirectUri + "\"" : "null";
     String json =
-        "{\"redirectUri\":" + redirectUriJson + ",\"firebaseUid\":\"" + firebaseUid + "\"}";
+        "{\"redirectUri\":" + redirectUriJson + ",\"userPublicId\":\"" + userPublicId + "\"}";
     return Base64.getUrlEncoder()
         .withoutPadding()
         .encodeToString(json.getBytes(StandardCharsets.UTF_8));
