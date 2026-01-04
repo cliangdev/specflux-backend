@@ -17,6 +17,7 @@ import com.specflux.github.infrastructure.GithubApiClient.TokenResponse;
 import com.specflux.github.infrastructure.GithubApiClient.UserProfile;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.user.domain.User;
+import com.specflux.user.domain.UserRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -35,35 +36,55 @@ public class GithubService {
 
   private final GithubApiClient githubApiClient;
   private final GithubInstallationRepository installationRepository;
+  private final UserRepository userRepository;
   private final CurrentUserService currentUserService;
   private final TransactionTemplate transactionTemplate;
 
   /**
    * Exchanges an OAuth authorization code for tokens and creates/updates the GitHub installation.
    *
+   * <p>This overload is used when calling from an authenticated context.
+   *
    * @param code the authorization code from OAuth callback
    * @return the created or updated GitHub installation
    * @throws GithubApiException if token exchange or user profile fetch fails
    */
   public GithubInstallation exchangeCodeForTokens(String code) {
+    User currentUser = currentUserService.getOrCreateCurrentUser();
+    return exchangeCodeForTokens(code, currentUser.getPublicId());
+  }
+
+  /**
+   * Exchanges an OAuth authorization code for tokens and creates/updates the GitHub installation.
+   *
+   * <p>This overload is used when calling from an unauthenticated context (OAuth callback) where
+   * the user public ID is passed via the OAuth state parameter.
+   *
+   * @param code the authorization code from OAuth callback
+   * @param userPublicId the public ID of the user to associate the installation with
+   * @return the created or updated GitHub installation
+   * @throws GithubApiException if token exchange or user profile fetch fails
+   * @throws EntityNotFoundException if no user exists with the given public ID
+   */
+  public GithubInstallation exchangeCodeForTokens(String code, String userPublicId) {
+    User user =
+        userRepository
+            .findByPublicId(userPublicId)
+            .orElseThrow(
+                () -> new EntityNotFoundException("User not found for public ID: " + userPublicId));
+    Long userId = user.getId();
+
+    // External API calls must be outside transaction to avoid connection pool exhaustion
+    TokenResponse tokenResponse = githubApiClient.exchangeCodeForTokens(code);
+    UserProfile userProfile = githubApiClient.getAuthenticatedUser(tokenResponse.getAccessToken());
+
     return transactionTemplate.execute(
         status -> {
-          User currentUser = currentUserService.getOrCreateCurrentUser();
-
-          // Exchange code for tokens
-          TokenResponse tokenResponse = githubApiClient.exchangeCodeForTokens(code);
-
-          // Get user profile to extract GitHub username and installation ID
-          UserProfile userProfile =
-              githubApiClient.getAuthenticatedUser(tokenResponse.getAccessToken());
-
-          // Check if installation already exists for this user
           Optional<GithubInstallation> existingInstallation =
-              installationRepository.findByUserId(currentUser.getId());
+              installationRepository.findByUserId(userId);
 
           GithubInstallation installation;
           if (existingInstallation.isPresent()) {
-            // Update existing installation
             installation = existingInstallation.get();
             installation.updateTokens(
                 tokenResponse.getAccessToken(),
@@ -71,21 +92,20 @@ public class GithubService {
                 tokenResponse.getRefreshToken(),
                 tokenResponse.getRefreshTokenExpiresAt());
             installation.setGithubUsername(userProfile.getLogin());
-            log.info("Updated GitHub installation for user {}", currentUser.getId());
+            log.info("Updated GitHub installation for user {}", userId);
           } else {
-            // Create new installation
             String publicId = generatePublicId("ghi");
             installation =
                 new GithubInstallation(
                     publicId,
-                    currentUser.getId(),
+                    userId,
                     userProfile.getId(),
                     tokenResponse.getAccessToken(),
                     tokenResponse.getAccessTokenExpiresAt(),
                     tokenResponse.getRefreshToken(),
                     tokenResponse.getRefreshTokenExpiresAt(),
                     userProfile.getLogin());
-            log.info("Created new GitHub installation for user {}", currentUser.getId());
+            log.info("Created new GitHub installation for user {}", userId);
           }
 
           return installationRepository.save(installation);
@@ -107,12 +127,12 @@ public class GithubService {
       return installation;
     }
 
+    log.info("Refreshing access token for installation {}", installation.getPublicId());
+    TokenResponse tokenResponse =
+        githubApiClient.refreshAccessToken(installation.getRefreshToken());
+
     return transactionTemplate.execute(
         status -> {
-          log.info("Refreshing access token for installation {}", installation.getPublicId());
-          TokenResponse tokenResponse =
-              githubApiClient.refreshAccessToken(installation.getRefreshToken());
-
           installation.updateTokens(
               tokenResponse.getAccessToken(),
               tokenResponse.getAccessTokenExpiresAt(),
@@ -135,7 +155,6 @@ public class GithubService {
    */
   public Repository createRepository(
       GithubInstallation installation, String repoName, String description, boolean isPrivate) {
-    // Refresh token if needed
     GithubInstallation freshInstallation = refreshAccessToken(installation);
 
     log.info(

@@ -62,6 +62,7 @@ public abstract class AbstractControllerIntegrationTest extends AbstractIntegrat
   void setUpTestUser() {
     testUser = userRepository.save(createTestUser());
     when(currentUserService.getCurrentUser()).thenReturn(testUser);
+    when(currentUserService.getOrCreateCurrentUser()).thenReturn(testUser);
   }
 
   /**

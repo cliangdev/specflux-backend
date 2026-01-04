@@ -90,8 +90,17 @@ src/main/java/com/specflux/
 | Internal ID | Database PK | Auto-increment bigint | `847291` |
 | Public ID | API responses | Prefixed nanoid | `task_V1StGXR8_Z5jdHi` |
 | Display Key | Human reference | Project key + sequence | `SPEC-42` |
+| Firebase UID | Auth provider ID | Firebase format | `abc123XYZ...` |
 
 **Entity Prefixes:** `user_`, `proj_`, `epic_`, `task_`, `rel_`
+
+**SECURITY: Never expose Firebase UID externally.** Firebase UID is an internal authentication identifier and should never appear in:
+- API responses
+- URLs or query parameters
+- OAuth state parameters
+- Logs visible to users
+
+Always use `publicId` (e.g., `user_xxx`) for external references to users.
 
 ## API Design
 
@@ -128,8 +137,26 @@ src/main/java/com/specflux/
 ### TransactionTemplate (not @Transactional)
 ```java
 return transactionTemplate.execute(status -> {
-    // Business logic in transaction
+    // Database operations only
     return result;
+});
+```
+
+**CRITICAL: Never include external API/HTTP calls inside transactions.** External calls hold the database connection while waiting for the response, causing connection pool exhaustion and performance issues.
+
+```java
+// WRONG - external call inside transaction
+return transactionTemplate.execute(status -> {
+    TokenResponse tokens = externalApi.getTokens(code);  // BAD!
+    entity.setToken(tokens.getAccessToken());
+    return repository.save(entity);
+});
+
+// CORRECT - external call outside transaction
+TokenResponse tokens = externalApi.getTokens(code);  // External call first
+return transactionTemplate.execute(status -> {
+    entity.setToken(tokens.getAccessToken());
+    return repository.save(entity);  // Only DB operations in transaction
 });
 ```
 
@@ -149,6 +176,27 @@ public class TaskController implements TasksApi {
     @Override
     public ResponseEntity<TaskDto> getTask(...) { /* ... */ }
 }
+```
+
+## Code Style
+
+**Avoid unnecessary inline comments.** Comments should explain "why", not "what". Self-explanatory code doesn't need comments:
+
+```java
+// BAD - states the obvious
+// Look up user by public ID
+User user = userRepository.findByPublicId(publicId);
+
+// Create new installation
+installation = new GithubInstallation(...);
+
+// GOOD - no comment needed, code is self-evident
+User user = userRepository.findByPublicId(publicId);
+installation = new GithubInstallation(...);
+
+// GOOD - explains why (architectural decision)
+// External API calls must be outside transaction to avoid connection pool exhaustion
+TokenResponse tokens = externalApi.getTokens(code);
 ```
 
 ## Database Migrations

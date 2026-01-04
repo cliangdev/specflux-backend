@@ -20,6 +20,8 @@ import com.specflux.api.generated.model.GithubInstallationStatusDto;
 import com.specflux.github.application.GithubService;
 import com.specflux.github.domain.GithubInstallation;
 import com.specflux.github.infrastructure.GithubAppConfig;
+import com.specflux.shared.application.CurrentUserService;
+import com.specflux.user.domain.User;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +40,7 @@ public class GithubController implements GitHubApi {
 
   private final GithubService githubService;
   private final GithubAppConfig githubAppConfig;
+  private final CurrentUserService currentUserService;
 
   @Value("${specflux.frontend.url:http://localhost:5173}")
   private String frontendUrl;
@@ -55,8 +58,12 @@ public class GithubController implements GitHubApi {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
-    // Build state parameter with redirect_uri for desktop app callback
-    String state = buildOAuthState(redirectUri);
+    // Get current user's public ID to include in OAuth state (callback is unauthenticated)
+    User currentUser = currentUserService.getOrCreateCurrentUser();
+    String userPublicId = currentUser.getPublicId();
+
+    // Build state parameter with redirect_uri and user public ID for callback
+    String state = buildOAuthState(redirectUri, userPublicId);
 
     String authUrl =
         String.format(
@@ -70,37 +77,36 @@ public class GithubController implements GitHubApi {
   }
 
   /**
-   * Builds OAuth state parameter containing the client's redirect URI.
+   * Builds OAuth state parameter containing user public ID and optional redirect URI.
    *
-   * <p>For desktop apps, this preserves the local server URL to redirect to after OAuth.
+   * <p>User public ID is required to associate the GitHub installation with the correct user since
+   * the callback endpoint is unauthenticated. For desktop apps, also includes the local server URL.
    */
-  private String buildOAuthState(URI redirectUri) {
+  private String buildOAuthState(URI redirectUri, String userPublicId) {
     try {
-      if (redirectUri != null) {
-        String json = OBJECT_MAPPER.writeValueAsString(new OAuthState(redirectUri.toString()));
-        return Base64.getUrlEncoder()
-            .withoutPadding()
-            .encodeToString(json.getBytes(StandardCharsets.UTF_8));
-      }
+      String redirectUriStr = redirectUri != null ? redirectUri.toString() : null;
+      String json = OBJECT_MAPPER.writeValueAsString(new OAuthState(redirectUriStr, userPublicId));
+      return Base64.getUrlEncoder()
+          .withoutPadding()
+          .encodeToString(json.getBytes(StandardCharsets.UTF_8));
     } catch (Exception e) {
       log.warn("Failed to encode OAuth state", e);
+      return "";
     }
-    return "";
   }
 
   /**
-   * Extracts redirect URI from OAuth state parameter.
+   * Parses the OAuth state parameter.
    *
-   * @return the redirect URI or null if not present/invalid
+   * @return the parsed state or null if invalid
    */
-  private String extractRedirectUri(String state) {
+  private OAuthState parseOAuthState(String state) {
     if (state == null || state.isEmpty()) {
       return null;
     }
     try {
       String json = new String(Base64.getUrlDecoder().decode(state), StandardCharsets.UTF_8);
-      OAuthState oauthState = OBJECT_MAPPER.readValue(json, OAuthState.class);
-      return oauthState.redirectUri();
+      return OBJECT_MAPPER.readValue(json, OAuthState.class);
     } catch (Exception e) {
       log.warn("Failed to decode OAuth state", e);
       return null;
@@ -108,7 +114,7 @@ public class GithubController implements GitHubApi {
   }
 
   /** OAuth state record for JSON serialization. */
-  private record OAuthState(String redirectUri) {}
+  private record OAuthState(String redirectUri, String userPublicId) {}
 
   /**
    * {@inheritDoc}
@@ -120,17 +126,26 @@ public class GithubController implements GitHubApi {
   public ResponseEntity<Void> handleGithubCallback(
       String code, Integer installationId, String setupAction, String state) {
 
-    // Extract desktop app's redirect URI from state (if present)
-    String clientRedirectUri = extractRedirectUri(state);
+    // Parse OAuth state to get user public ID and redirect URI
+    OAuthState oauthState = parseOAuthState(state);
+    String clientRedirectUri = oauthState != null ? oauthState.redirectUri() : null;
+    String userPublicId = oauthState != null ? oauthState.userPublicId() : null;
+
+    if (userPublicId == null || userPublicId.isBlank()) {
+      log.error("GitHub OAuth callback missing user public ID in state");
+      String redirectUrl = buildCallbackRedirectUrl(clientRedirectUri, null, false);
+      return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+    }
 
     try {
       log.info(
-          "Handling GitHub OAuth callback: installationId={}, setupAction={}, hasClientRedirect={}",
+          "Handling GitHub OAuth callback: userPublicId={}, installationId={}, setupAction={}, hasClientRedirect={}",
+          userPublicId,
           installationId,
           setupAction,
           clientRedirectUri != null);
 
-      GithubInstallation installation = githubService.exchangeCodeForTokens(code);
+      GithubInstallation installation = githubService.exchangeCodeForTokens(code, userPublicId);
       log.info("GitHub installation successful for user: {}", installation.getGithubUsername());
 
       String redirectUrl = buildCallbackRedirectUrl(clientRedirectUri, installation, true);
