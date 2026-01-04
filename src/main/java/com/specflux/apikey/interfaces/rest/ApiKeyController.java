@@ -1,36 +1,36 @@
 package com.specflux.apikey.interfaces.rest;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.specflux.api.generated.ApiKeysApi;
+import com.specflux.api.generated.model.ApiKeyCreatedResponseDto;
+import com.specflux.api.generated.model.ApiKeyResponseDto;
+import com.specflux.api.generated.model.CreateApiKeyRequestDto;
 import com.specflux.apikey.application.ApiKeyService;
 import com.specflux.apikey.application.ApiKeyService.ApiKeyCreationResult;
+import com.specflux.apikey.domain.ApiKey;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.user.domain.User;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
  * REST controller for API key management.
  *
- * <p>Endpoints for creating, listing, and revoking API keys for the authenticated user.
+ * <p>Endpoints for creating, listing, and revoking API keys for the authenticated user. Implements
+ * the generated ApiKeysApi interface from OpenAPI specification.
  */
 @RestController
-@RequestMapping("/api/users/me/api-keys")
 @RequiredArgsConstructor
-public class ApiKeyController {
+public class ApiKeyController implements ApiKeysApi {
 
   private static final Logger log = LoggerFactory.getLogger(ApiKeyController.class);
 
@@ -38,22 +38,21 @@ public class ApiKeyController {
   private final CurrentUserService currentUserService;
 
   /**
-   * Creates a new API key for the authenticated user.
+   * {@inheritDoc}
    *
-   * <p>Returns the full key in the response. This is the ONLY time the full key is shown - it
-   * cannot be retrieved again.
-   *
-   * @param request the creation request with optional name and expiration
-   * @return the created API key with full key value
+   * <p>Creates a new API key. The full secret is only returned once at creation time.
    */
-  @PostMapping
-  public ResponseEntity<?> createApiKey(
-      @Valid @RequestBody(required = false) CreateApiKeyRequest request) {
+  @Override
+  public ResponseEntity<ApiKeyCreatedResponseDto> createApiKey(
+      CreateApiKeyRequestDto createApiKeyRequestDto) {
     User currentUser = currentUserService.getCurrentUser();
 
     try {
-      String name = request != null ? request.name() : null;
-      var expiresAt = request != null ? request.expiresAt() : null;
+      String name = createApiKeyRequestDto != null ? createApiKeyRequestDto.getName() : null;
+      var expiresAt =
+          createApiKeyRequestDto != null && createApiKeyRequestDto.getExpiresAt() != null
+              ? createApiKeyRequestDto.getExpiresAt().toInstant()
+              : null;
 
       ApiKeyCreationResult result =
           apiKeyService.createApiKey(currentUser.getId(), name, expiresAt);
@@ -63,60 +62,84 @@ public class ApiKeyController {
           result.apiKey().getPublicId(),
           currentUser.getPublicId());
 
-      return ResponseEntity.status(HttpStatus.CREATED).body(ApiKeyCreatedResponse.from(result));
+      return ResponseEntity.status(HttpStatus.CREATED).body(toCreatedDto(result));
     } catch (IllegalStateException e) {
-      // User already has an active key
+      // User already has an active key - return 409 Conflict
       log.warn(
           "Failed to create API key for user {}: {}", currentUser.getPublicId(), e.getMessage());
-      return ResponseEntity.status(HttpStatus.CONFLICT)
-          .body(new ErrorResponse("conflict", e.getMessage()));
+      // The interface expects ApiKeyCreatedResponseDto, but we need to return 409
+      // Using ResponseEntity.status() to override
+      return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
   }
 
   /**
-   * Lists all API keys for the authenticated user.
+   * {@inheritDoc}
    *
-   * <p>Returns metadata only - the full key is never returned after creation.
-   *
-   * @return list of API keys (without secrets)
+   * <p>Returns all API keys for the authenticated user. Secret keys are masked.
    */
-  @GetMapping
-  public ResponseEntity<List<ApiKeyResponse>> listApiKeys() {
+  @Override
+  public ResponseEntity<List<ApiKeyResponseDto>> listApiKeys() {
     User currentUser = currentUserService.getCurrentUser();
 
-    List<ApiKeyResponse> keys =
-        apiKeyService.listKeys(currentUser.getId()).stream().map(ApiKeyResponse::from).toList();
+    List<ApiKeyResponseDto> keys =
+        apiKeyService.listKeys(currentUser.getId()).stream().map(this::toResponseDto).toList();
 
     return ResponseEntity.ok(keys);
   }
 
   /**
-   * Revokes an API key.
+   * {@inheritDoc}
    *
-   * <p>The key is immediately invalidated and cannot be used for authentication.
-   *
-   * @param id the API key's public ID
-   * @return 204 No Content on success
+   * <p>Permanently revokes the specified API key.
    */
-  @DeleteMapping("/{id}")
-  public ResponseEntity<?> revokeApiKey(@PathVariable String id) {
+  @Override
+  public ResponseEntity<Void> revokeApiKey(String keyId) {
     User currentUser = currentUserService.getCurrentUser();
 
     try {
-      apiKeyService.revokeKey(id, currentUser.getId());
-      log.info("Revoked API key {} for user {}", id, currentUser.getPublicId());
+      apiKeyService.revokeKey(keyId, currentUser.getId());
+      log.info("Revoked API key {} for user {}", keyId, currentUser.getPublicId());
       return ResponseEntity.noContent().build();
     } catch (IllegalArgumentException e) {
       // Key not found
-      return ResponseEntity.status(HttpStatus.NOT_FOUND)
-          .body(new ErrorResponse("not_found", e.getMessage()));
+      return ResponseEntity.notFound().build();
     } catch (IllegalStateException e) {
       // Key doesn't belong to user
-      return ResponseEntity.status(HttpStatus.FORBIDDEN)
-          .body(new ErrorResponse("forbidden", e.getMessage()));
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
   }
 
-  /** Simple error response record. */
-  private record ErrorResponse(String error, String message) {}
+  /** Converts an ApiKey entity to the generated response DTO. */
+  private ApiKeyResponseDto toResponseDto(ApiKey apiKey) {
+    ApiKeyResponseDto dto = new ApiKeyResponseDto();
+    dto.setId(apiKey.getPublicId());
+    dto.setName(apiKey.getName());
+    dto.setKeyPrefix(apiKey.getMaskedPrefix());
+    dto.setCreatedAt(OffsetDateTime.ofInstant(apiKey.getCreatedAt(), ZoneOffset.UTC));
+    if (apiKey.getExpiresAt() != null) {
+      dto.setExpiresAt(OffsetDateTime.ofInstant(apiKey.getExpiresAt(), ZoneOffset.UTC));
+    }
+    if (apiKey.getLastUsedAt() != null) {
+      dto.setLastUsedAt(OffsetDateTime.ofInstant(apiKey.getLastUsedAt(), ZoneOffset.UTC));
+    }
+    dto.setIsExpired(apiKey.isExpired());
+    dto.setIsRevoked(apiKey.isRevoked());
+    return dto;
+  }
+
+  /** Converts an ApiKeyCreationResult to the generated created response DTO. */
+  private ApiKeyCreatedResponseDto toCreatedDto(ApiKeyCreationResult result) {
+    ApiKey apiKey = result.apiKey();
+    ApiKeyCreatedResponseDto dto = new ApiKeyCreatedResponseDto();
+    dto.setId(apiKey.getPublicId());
+    dto.setKey(result.fullKey());
+    dto.setName(apiKey.getName());
+    dto.setKeyPrefix(apiKey.getKeyPrefix());
+    dto.setCreatedAt(OffsetDateTime.ofInstant(apiKey.getCreatedAt(), ZoneOffset.UTC));
+    if (apiKey.getExpiresAt() != null) {
+      dto.setExpiresAt(OffsetDateTime.ofInstant(apiKey.getExpiresAt(), ZoneOffset.UTC));
+    }
+    return dto;
+  }
 }
