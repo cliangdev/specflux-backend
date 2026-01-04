@@ -68,8 +68,12 @@ jobs:
             --port 8090 \
             --set-env-vars "SPRING_PROFILES_ACTIVE=staging" \
             --set-env-vars "FIREBASE_CONFIG_PATH=/secrets/firebase/config.json" \
+            --set-env-vars "GITHUB_REDIRECT_URI=https://specflux-backend-staging.a.run.app/api/github/callback" \
             --set-secrets "DATABASE_URL=specflux-staging-db-url:latest" \
             --set-secrets "/secrets/firebase/config.json=specflux-staging-firebase-credentials:latest" \
+            --set-secrets "GITHUB_APP_ID=specflux-github-app-id:latest" \
+            --set-secrets "GITHUB_CLIENT_ID=specflux-github-client-id:latest" \
+            --set-secrets "GITHUB_CLIENT_SECRET=specflux-github-client-secret:latest" \
             --min-instances 0 \
             --max-instances 3 \
             --memory 512Mi \

@@ -1,16 +1,16 @@
 package com.specflux.github.interfaces.rest;
 
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -19,8 +19,6 @@ import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.github.application.GithubService;
 import com.specflux.github.domain.GithubInstallation;
 import com.specflux.github.infrastructure.GithubAppConfig;
-
-import jakarta.persistence.EntityNotFoundException;
 
 /**
  * Integration tests for GithubController.
@@ -105,7 +103,8 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
                         "https://github.com/login/oauth/authorize")))
         .andExpect(
             header()
-                .string("Location", org.hamcrest.Matchers.containsString("client_id=test-client-id")));
+                .string(
+                    "Location", org.hamcrest.Matchers.containsString("client_id=test-client-id")));
   }
 
   @Test
@@ -115,6 +114,21 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
     mockMvc
         .perform(get("/api/github/install").with(user("user")))
         .andExpect(status().isInternalServerError());
+  }
+
+  @Test
+  void initiateGithubInstall_withRedirectUri_shouldIncludeInState() throws Exception {
+    when(githubAppConfig.isConfigured()).thenReturn(true);
+    when(githubAppConfig.getClientId()).thenReturn("test-client-id");
+    when(githubAppConfig.getRedirectUri()).thenReturn("http://localhost:8090/api/github/callback");
+
+    mockMvc
+        .perform(
+            get("/api/github/install")
+                .param("redirect_uri", "http://localhost:8765")
+                .with(user("user")))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("state=")));
   }
 
   // ==================== GET /api/github/callback ====================
@@ -131,7 +145,8 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
                 .param("installation_id", "12345")
                 .with(user("user")))
         .andExpect(status().isFound())
-        .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("github=success")));
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.containsString("github=success")));
   }
 
   @Test
@@ -146,10 +161,64 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
                 .param("installation_id", "12345")
                 .with(user("user")))
         .andExpect(status().isFound())
-        .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("github=error")));
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.containsString("github=error")));
+  }
+
+  @Test
+  void handleGithubCallback_withState_shouldRedirectToClientUri() throws Exception {
+    GithubInstallation installation = createTestInstallation();
+    when(githubService.exchangeCodeForTokens("test-code")).thenReturn(installation);
+
+    // Build state with redirect_uri (same format as controller)
+    String state = buildOAuthState("http://localhost:8765");
+
+    mockMvc
+        .perform(
+            get("/api/github/callback")
+                .param("code", "test-code")
+                .param("installation_id", "12345")
+                .param("state", state)
+                .with(user("user")))
+        .andExpect(status().isFound())
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.startsWith("http://localhost:8765")))
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.containsString("github=success")))
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.containsString("username=testuser")));
+  }
+
+  @Test
+  void handleGithubCallback_withState_failure_shouldRedirectToClientUriWithError()
+      throws Exception {
+    when(githubService.exchangeCodeForTokens("invalid-code"))
+        .thenThrow(new RuntimeException("Token exchange failed"));
+
+    String state = buildOAuthState("http://localhost:8765");
+
+    mockMvc
+        .perform(
+            get("/api/github/callback")
+                .param("code", "invalid-code")
+                .param("installation_id", "12345")
+                .param("state", state)
+                .with(user("user")))
+        .andExpect(status().isFound())
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.startsWith("http://localhost:8765")))
+        .andExpect(
+            header().string("Location", org.hamcrest.Matchers.containsString("github=error")));
   }
 
   // ==================== Helper Methods ====================
+
+  private String buildOAuthState(String redirectUri) {
+    String json = "{\"redirectUri\":\"" + redirectUri + "\"}";
+    return Base64.getUrlEncoder()
+        .withoutPadding()
+        .encodeToString(json.getBytes(StandardCharsets.UTF_8));
+  }
 
   private GithubInstallation createTestInstallation() {
     return new GithubInstallation(
