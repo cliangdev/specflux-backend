@@ -54,6 +54,9 @@ public class SecurityConfig {
                     .requestMatchers(
                         "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/openapi/**")
                     .permitAll()
+                    // GitHub OAuth flow (initiated from browser, no auth token available)
+                    .requestMatchers("/api/github/install", "/api/github/callback")
+                    .permitAll()
                     // All other requests require authentication
                     .anyRequest()
                     .authenticated())
