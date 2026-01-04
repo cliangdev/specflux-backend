@@ -1909,10 +1909,10 @@ paths:
           description: OAuth authorization code from GitHub
         - name: installation_id
           in: query
-          required: true
+          required: false
           schema:
             type: integer
-          description: GitHub installation ID
+          description: GitHub App installation ID (only present during app installation flow)
         - name: setup_action
           in: query
           required: false
