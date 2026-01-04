@@ -77,7 +77,6 @@ public class GithubController implements GitHubApi {
   private String buildOAuthState(URI redirectUri) {
     try {
       if (redirectUri != null) {
-        // Encode redirect_uri in state as Base64 JSON
         String json = OBJECT_MAPPER.writeValueAsString(new OAuthState(redirectUri.toString()));
         return Base64.getUrlEncoder()
             .withoutPadding()
@@ -131,19 +130,14 @@ public class GithubController implements GitHubApi {
           setupAction,
           clientRedirectUri != null);
 
-      // Exchange code for tokens and create/update installation
       GithubInstallation installation = githubService.exchangeCodeForTokens(code);
-
       log.info("GitHub installation successful for user: {}", installation.getGithubUsername());
 
-      // Build redirect URL with success info
       String redirectUrl = buildCallbackRedirectUrl(clientRedirectUri, installation, true);
       return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
 
     } catch (Exception e) {
       log.error("GitHub OAuth callback failed", e);
-
-      // Redirect with error
       String redirectUrl = buildCallbackRedirectUrl(clientRedirectUri, null, false);
       return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
     }
