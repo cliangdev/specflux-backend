@@ -1,5 +1,11 @@
 package com.specflux.github.interfaces.rest;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -9,8 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -18,7 +26,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.github.application.GithubService;
 import com.specflux.github.domain.GithubInstallation;
+import com.specflux.github.infrastructure.GithubApiClient.Repository;
+import com.specflux.github.infrastructure.GithubApiClient.RepositoryListResponse;
 import com.specflux.github.infrastructure.GithubAppConfig;
+
+import jakarta.persistence.EntityNotFoundException;
 
 /**
  * Integration tests for GithubController.
@@ -231,7 +243,199 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
             header().string("Location", org.hamcrest.Matchers.containsString("github=error")));
   }
 
+  // ==================== GET /api/github/repos ====================
+
+  @Test
+  void listGithubRepos_shouldReturnRepoList() throws Exception {
+    Repository repo1 = createTestRepository(1L, "repo-one", "user/repo-one", false);
+    Repository repo2 = createTestRepository(2L, "repo-two", "user/repo-two", true);
+    RepositoryListResponse response = new RepositoryListResponse(List.of(repo1, repo2), 2, 1, 30);
+
+    when(githubService.listRepositories(1, 30)).thenReturn(response);
+
+    mockMvc
+        .perform(get("/api/github/repos").with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.repos").isArray())
+        .andExpect(jsonPath("$.repos.length()").value(2))
+        .andExpect(jsonPath("$.repos[0].name").value("repo-one"))
+        .andExpect(jsonPath("$.repos[0].fullName").value("user/repo-one"))
+        .andExpect(jsonPath("$.repos[0].private").value(false))
+        .andExpect(jsonPath("$.repos[1].name").value("repo-two"))
+        .andExpect(jsonPath("$.repos[1].private").value(true))
+        .andExpect(jsonPath("$.totalCount").value(2))
+        .andExpect(jsonPath("$.page").value(1))
+        .andExpect(jsonPath("$.perPage").value(30));
+  }
+
+  @Test
+  void listGithubRepos_withPagination_shouldPassParameters() throws Exception {
+    RepositoryListResponse response = new RepositoryListResponse(List.of(), 0, 2, 50);
+    when(githubService.listRepositories(2, 50)).thenReturn(response);
+
+    mockMvc
+        .perform(
+            get("/api/github/repos").param("page", "2").param("per_page", "50").with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page").value(2))
+        .andExpect(jsonPath("$.perPage").value(50));
+
+    verify(githubService).listRepositories(2, 50);
+  }
+
+  @Test
+  void listGithubRepos_whenNotConnected_shouldReturn404() throws Exception {
+    when(githubService.listRepositories(anyInt(), anyInt()))
+        .thenThrow(new EntityNotFoundException("No GitHub installation found"));
+
+    mockMvc.perform(get("/api/github/repos").with(user("user"))).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void listGithubRepos_withoutAuth_shouldReturn403() throws Exception {
+    mockMvc.perform(get("/api/github/repos")).andExpect(status().isForbidden());
+  }
+
+  // ==================== POST /api/github/repos ====================
+
+  @Test
+  void createGithubRepo_shouldCreateAndReturnRepo() throws Exception {
+    Repository createdRepo = createTestRepository(123L, "new-project", "user/new-project", true);
+    createdRepo.setDescription("A new project");
+
+    when(githubService.createRepository("new-project", "A new project", true))
+        .thenReturn(createdRepo);
+
+    mockMvc
+        .perform(
+            post("/api/github/repos")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "name": "new-project",
+                      "description": "A new project",
+                      "private": true
+                    }
+                    """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value(123))
+        .andExpect(jsonPath("$.name").value("new-project"))
+        .andExpect(jsonPath("$.fullName").value("user/new-project"))
+        .andExpect(jsonPath("$.description").value("A new project"))
+        .andExpect(jsonPath("$.private").value(true))
+        .andExpect(jsonPath("$.htmlUrl").value("https://github.com/user/new-project"))
+        .andExpect(jsonPath("$.cloneUrl").value("https://github.com/user/new-project.git"));
+  }
+
+  @Test
+  void createGithubRepo_withMinimalPayload_shouldUseDefaults() throws Exception {
+    Repository createdRepo = createTestRepository(456L, "minimal-repo", "user/minimal-repo", true);
+
+    when(githubService.createRepository(eq("minimal-repo"), isNull(), eq(true)))
+        .thenReturn(createdRepo);
+
+    mockMvc
+        .perform(
+            post("/api/github/repos")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "name": "minimal-repo"
+                    }
+                    """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.name").value("minimal-repo"));
+  }
+
+  @Test
+  void createGithubRepo_withPublicVisibility_shouldCreatePublicRepo() throws Exception {
+    Repository createdRepo = createTestRepository(789L, "public-repo", "user/public-repo", false);
+
+    when(githubService.createRepository("public-repo", null, false)).thenReturn(createdRepo);
+
+    mockMvc
+        .perform(
+            post("/api/github/repos")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "name": "public-repo",
+                      "private": false
+                    }
+                    """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.private").value(false));
+  }
+
+  @Test
+  void createGithubRepo_whenNotConnected_shouldReturn404() throws Exception {
+    when(githubService.createRepository(anyString(), any(), anyBoolean()))
+        .thenThrow(new EntityNotFoundException("No GitHub installation found"));
+
+    mockMvc
+        .perform(
+            post("/api/github/repos")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "name": "test-repo"
+                    }
+                    """))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void createGithubRepo_withoutAuth_shouldReturn403() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/github/repos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "name": "test-repo"
+                    }
+                    """))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void createGithubRepo_withoutName_shouldReturn400() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/github/repos")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "description": "No name provided"
+                    }
+                    """))
+        .andExpect(status().isBadRequest());
+  }
+
   // ==================== Helper Methods ====================
+
+  private Repository createTestRepository(
+      Long id, String name, String fullName, boolean isPrivate) {
+    Repository repo = new Repository();
+    repo.setId(id);
+    repo.setName(name);
+    repo.setFullName(fullName);
+    repo.setPrivateRepo(isPrivate);
+    repo.setHtmlUrl("https://github.com/" + fullName);
+    repo.setCloneUrl("https://github.com/" + fullName + ".git");
+    return repo;
+  }
 
   private String buildOAuthState(String redirectUri, String userPublicId) {
     String redirectUriJson = redirectUri != null ? "\"" + redirectUri + "\"" : "null";

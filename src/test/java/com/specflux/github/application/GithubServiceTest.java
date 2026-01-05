@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,8 @@ import com.specflux.common.AbstractIntegrationTest;
 import com.specflux.github.domain.GithubInstallation;
 import com.specflux.github.domain.GithubInstallationRepository;
 import com.specflux.github.infrastructure.GithubApiClient;
+import com.specflux.github.infrastructure.GithubApiClient.Repository;
+import com.specflux.github.infrastructure.GithubApiClient.RepositoryListResponse;
 import com.specflux.github.infrastructure.GithubApiClient.TokenResponse;
 import com.specflux.github.infrastructure.GithubApiClient.UserProfile;
 import com.specflux.shared.infrastructure.security.FirebasePrincipal;
@@ -189,6 +192,113 @@ class GithubServiceTest extends AbstractIntegrationTest {
     verify(githubApiClient, never()).refreshAccessToken(anyString());
   }
 
+  // ==================== listRepositories ====================
+
+  @Test
+  void listRepositories_shouldReturnRepos() {
+    GithubInstallation installation = createTestInstallation();
+    installationRepository.save(installation);
+
+    Repository repo1 = createTestRepository(1L, "repo-one");
+    Repository repo2 = createTestRepository(2L, "repo-two");
+    RepositoryListResponse apiResponse =
+        new RepositoryListResponse(List.of(repo1, repo2), 2, 1, 30);
+
+    when(githubApiClient.listRepositories("access-token", 1, 30)).thenReturn(apiResponse);
+
+    RepositoryListResponse result = githubService.listRepositories(1, 30);
+
+    assertThat(result.getRepos()).hasSize(2);
+    assertThat(result.getRepos().get(0).getName()).isEqualTo("repo-one");
+    assertThat(result.getRepos().get(1).getName()).isEqualTo("repo-two");
+    assertThat(result.getTotalCount()).isEqualTo(2);
+  }
+
+  @Test
+  void listRepositories_shouldRefreshTokenIfExpired() {
+    GithubInstallation installation =
+        new GithubInstallation(
+            "ghi_expired123456",
+            testUser.getId(),
+            12345L,
+            "expired-token",
+            Instant.now().minusSeconds(3600),
+            "refresh-token",
+            Instant.now().plusSeconds(86400),
+            "testuser");
+    installationRepository.save(installation);
+
+    TokenResponse newTokenResponse = createTokenResponse();
+    when(githubApiClient.refreshAccessToken("refresh-token")).thenReturn(newTokenResponse);
+
+    RepositoryListResponse apiResponse = new RepositoryListResponse(List.of(), 0, 1, 30);
+    when(githubApiClient.listRepositories("new-access-token", 1, 30)).thenReturn(apiResponse);
+
+    RepositoryListResponse result = githubService.listRepositories(1, 30);
+
+    verify(githubApiClient).refreshAccessToken("refresh-token");
+    verify(githubApiClient).listRepositories("new-access-token", 1, 30);
+    assertThat(result).isNotNull();
+  }
+
+  @Test
+  void listRepositories_shouldThrowWhenNoInstallation() {
+    assertThatThrownBy(() -> githubService.listRepositories(1, 30))
+        .isInstanceOf(EntityNotFoundException.class)
+        .hasMessageContaining("No GitHub installation found");
+  }
+
+  // ==================== createRepository (convenience overload) ====================
+
+  @Test
+  void createRepository_shouldCreateRepo() {
+    GithubInstallation installation = createTestInstallation();
+    installationRepository.save(installation);
+
+    Repository createdRepo = createTestRepository(123L, "new-repo");
+    when(githubApiClient.createRepository("access-token", "new-repo", "A description", true))
+        .thenReturn(createdRepo);
+
+    Repository result = githubService.createRepository("new-repo", "A description", true);
+
+    assertThat(result.getName()).isEqualTo("new-repo");
+    assertThat(result.getId()).isEqualTo(123L);
+  }
+
+  @Test
+  void createRepository_shouldRefreshTokenIfExpired() {
+    GithubInstallation installation =
+        new GithubInstallation(
+            "ghi_expired123456",
+            testUser.getId(),
+            12345L,
+            "expired-token",
+            Instant.now().minusSeconds(3600),
+            "refresh-token",
+            Instant.now().plusSeconds(86400),
+            "testuser");
+    installationRepository.save(installation);
+
+    TokenResponse newTokenResponse = createTokenResponse();
+    when(githubApiClient.refreshAccessToken("refresh-token")).thenReturn(newTokenResponse);
+
+    Repository createdRepo = createTestRepository(456L, "new-repo");
+    when(githubApiClient.createRepository("new-access-token", "new-repo", null, false))
+        .thenReturn(createdRepo);
+
+    Repository result = githubService.createRepository("new-repo", null, false);
+
+    verify(githubApiClient).refreshAccessToken("refresh-token");
+    assertThat(result.getId()).isEqualTo(456L);
+  }
+
+  @Test
+  void createRepository_shouldThrowWhenNoInstallation() {
+    assertThatThrownBy(() -> githubService.createRepository("new-repo", null, true))
+        .isInstanceOf(EntityNotFoundException.class)
+        .hasMessageContaining("No GitHub installation found");
+  }
+
   private TokenResponse createTokenResponse() {
     TokenResponse response = new TokenResponse();
     response.setAccessToken("new-access-token");
@@ -215,6 +325,17 @@ class GithubServiceTest extends AbstractIntegrationTest {
         "refresh-token",
         Instant.now().plusSeconds(86400),
         "testuser");
+  }
+
+  private Repository createTestRepository(Long id, String name) {
+    Repository repo = new Repository();
+    repo.setId(id);
+    repo.setName(name);
+    repo.setFullName("testuser/" + name);
+    repo.setPrivateRepo(true);
+    repo.setHtmlUrl("https://github.com/testuser/" + name);
+    repo.setCloneUrl("https://github.com/testuser/" + name + ".git");
+    return repo;
   }
 
   private void setSecurityContext(User user) {
