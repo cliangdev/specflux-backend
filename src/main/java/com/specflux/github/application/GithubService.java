@@ -13,6 +13,7 @@ import com.specflux.github.domain.GithubInstallationRepository;
 import com.specflux.github.infrastructure.GithubApiClient;
 import com.specflux.github.infrastructure.GithubApiClient.GithubApiException;
 import com.specflux.github.infrastructure.GithubApiClient.Repository;
+import com.specflux.github.infrastructure.GithubApiClient.RepositoryListResponse;
 import com.specflux.github.infrastructure.GithubApiClient.TokenResponse;
 import com.specflux.github.infrastructure.GithubApiClient.UserProfile;
 import com.specflux.shared.application.CurrentUserService;
@@ -164,6 +165,41 @@ public class GithubService {
 
     return githubApiClient.createRepository(
         freshInstallation.getAccessToken(), repoName, description, isPrivate);
+  }
+
+  /**
+   * Lists GitHub repositories for the current user.
+   *
+   * @param page the page number (1-indexed)
+   * @param perPage the number of repositories per page (max 100)
+   * @return the list of repositories with pagination info
+   * @throws GithubApiException if listing fails
+   */
+  public RepositoryListResponse listRepositories(int page, int perPage) {
+    GithubInstallation installation = getInstallation();
+    GithubInstallation freshInstallation = refreshAccessToken(installation);
+
+    log.info(
+        "Listing GitHub repositories for user {}, page={}, perPage={}",
+        freshInstallation.getGithubUsername(),
+        page,
+        perPage);
+
+    return githubApiClient.listRepositories(freshInstallation.getAccessToken(), page, perPage);
+  }
+
+  /**
+   * Creates a new GitHub repository for the current user.
+   *
+   * @param repoName the repository name
+   * @param description the repository description (optional)
+   * @param isPrivate whether the repository should be private
+   * @return the created repository
+   * @throws GithubApiException if repository creation fails
+   */
+  public Repository createRepository(String repoName, String description, boolean isPrivate) {
+    GithubInstallation installation = getInstallation();
+    return createRepository(installation, repoName, description, isPrivate);
   }
 
   /**

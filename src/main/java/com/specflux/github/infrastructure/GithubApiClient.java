@@ -1,10 +1,12 @@
 package com.specflux.github.infrastructure;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -201,6 +204,68 @@ public class GithubApiClient {
     }
   }
 
+  /**
+   * Lists repositories for the authenticated user.
+   *
+   * @param accessToken the access token
+   * @param page the page number (1-indexed)
+   * @param perPage the number of repositories per page (max 100)
+   * @return the list of repositories
+   * @throws GithubApiException if the request fails
+   */
+  public RepositoryListResponse listRepositories(String accessToken, int page, int perPage) {
+    String url =
+        UriComponentsBuilder.fromUriString(GITHUB_API_BASE + "/user/repos")
+            .queryParam("visibility", "all")
+            .queryParam("affiliation", "owner")
+            .queryParam("sort", "updated")
+            .queryParam("direction", "desc")
+            .queryParam("page", page)
+            .queryParam("per_page", perPage)
+            .build()
+            .toUriString();
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Authorization", "Bearer " + accessToken);
+    headers.set("Accept", "application/vnd.github+json");
+
+    HttpEntity<?> request = new HttpEntity<>(headers);
+
+    try {
+      log.debug("Listing GitHub repositories for user, page={}, perPage={}", page, perPage);
+      ResponseEntity<List<Repository>> response =
+          restTemplate.exchange(
+              url, HttpMethod.GET, request, new ParameterizedTypeReference<List<Repository>>() {});
+
+      if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+        throw new GithubApiException("Failed to list repositories");
+      }
+
+      List<Repository> repos = response.getBody();
+      log.debug("Successfully fetched {} repositories", repos.size());
+
+      // Parse Link header for total count if available
+      String linkHeader = response.getHeaders().getFirst("Link");
+      int totalCount = estimateTotalCount(repos.size(), page, perPage, linkHeader);
+
+      return new RepositoryListResponse(repos, totalCount, page, perPage);
+    } catch (HttpClientErrorException e) {
+      log.error("GitHub repository list failed: {}", e.getMessage());
+      throw new GithubApiException("Failed to list repositories: " + e.getMessage(), e);
+    }
+  }
+
+  /** Estimates total count based on Link header or current page size. */
+  private int estimateTotalCount(int currentSize, int page, int perPage, String linkHeader) {
+    // If we got fewer than perPage, this is likely the last page
+    if (currentSize < perPage) {
+      return (page - 1) * perPage + currentSize;
+    }
+    // If there's a "last" link, we could parse it, but for simplicity we'll just indicate there's
+    // more
+    return page * perPage + 1; // At least this many
+  }
+
   /** Response from GitHub OAuth token exchange/refresh. */
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -298,6 +363,22 @@ public class GithubApiClient {
 
     public GithubApiException(String message, Throwable cause) {
       super(message, cause);
+    }
+  }
+
+  /** Response containing a list of repositories with pagination info. */
+  @Data
+  public static class RepositoryListResponse {
+    private final List<Repository> repos;
+    private final int totalCount;
+    private final int page;
+    private final int perPage;
+
+    public RepositoryListResponse(List<Repository> repos, int totalCount, int page, int perPage) {
+      this.repos = repos;
+      this.totalCount = totalCount;
+      this.page = page;
+      this.perPage = perPage;
     }
   }
 }

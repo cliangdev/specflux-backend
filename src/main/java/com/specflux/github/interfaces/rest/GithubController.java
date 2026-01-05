@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,10 +17,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.specflux.api.generated.GitHubApi;
+import com.specflux.api.generated.model.CreateGithubRepoRequestDto;
 import com.specflux.api.generated.model.GithubInstallResponseDto;
 import com.specflux.api.generated.model.GithubInstallationStatusDto;
+import com.specflux.api.generated.model.GithubRepoDto;
+import com.specflux.api.generated.model.GithubRepoListResponseDto;
 import com.specflux.github.application.GithubService;
 import com.specflux.github.domain.GithubInstallation;
+import com.specflux.github.infrastructure.GithubApiClient.Repository;
+import com.specflux.github.infrastructure.GithubApiClient.RepositoryListResponse;
 import com.specflux.github.infrastructure.GithubAppConfig;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.user.domain.User;
@@ -226,5 +232,56 @@ public class GithubController implements GitHubApi {
     githubService.disconnect();
     log.info("GitHub installation disconnected");
     return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Lists GitHub repositories for the current user.
+   */
+  @Override
+  public ResponseEntity<GithubRepoListResponseDto> listGithubRepos(Integer page, Integer perPage) {
+    int pageNum = page != null ? page : 1;
+    int perPageNum = perPage != null ? perPage : 30;
+
+    RepositoryListResponse response = githubService.listRepositories(pageNum, perPageNum);
+
+    List<GithubRepoDto> repoDtos = response.getRepos().stream().map(this::toGithubRepoDto).toList();
+
+    GithubRepoListResponseDto dto =
+        new GithubRepoListResponseDto(repoDtos, response.getTotalCount(), pageNum, perPageNum);
+
+    return ResponseEntity.ok(dto);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Creates a new GitHub repository for the current user.
+   */
+  @Override
+  public ResponseEntity<GithubRepoDto> createGithubRepo(CreateGithubRepoRequestDto createRequest) {
+    String name = createRequest.getName();
+    String description = createRequest.getDescription();
+    Boolean isPrivate = createRequest.getPrivate();
+
+    Repository repo =
+        githubService.createRepository(name, description, isPrivate != null ? isPrivate : true);
+
+    log.info("Created GitHub repository: {}", repo.getFullName());
+    return ResponseEntity.status(HttpStatus.CREATED).body(toGithubRepoDto(repo));
+  }
+
+  /** Converts a GitHub repository to a DTO. */
+  private GithubRepoDto toGithubRepoDto(Repository repo) {
+    GithubRepoDto dto = new GithubRepoDto();
+    dto.setId(repo.getId());
+    dto.setName(repo.getName());
+    dto.setFullName(repo.getFullName());
+    dto.setDescription(repo.getDescription());
+    dto.setPrivate(repo.isPrivateRepo());
+    dto.setHtmlUrl(URI.create(repo.getHtmlUrl()));
+    dto.setCloneUrl(URI.create(repo.getCloneUrl()));
+    return dto;
   }
 }
