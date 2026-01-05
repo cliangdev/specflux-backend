@@ -79,6 +79,13 @@
             <version>2.2.41</version>
         </dependency>
 
+        <!-- JSON structured logging for GCP Cloud Run -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>9.0</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
