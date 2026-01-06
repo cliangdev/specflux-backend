@@ -196,10 +196,16 @@ public class GithubApiClient {
       log.info("Successfully created GitHub repository: {}", name);
       return response.getBody();
     } catch (HttpClientErrorException e) {
+      log.error("GitHub repository creation failed: {}", e.getMessage());
+      if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
+        throw new GithubApiException(
+            "Cannot create repository. GitHub App tokens don't have permission to create user repositories. "
+                + "Please create the repository manually on GitHub and use 'Link Existing'.",
+            e);
+      }
       if (e.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
         throw new GithubApiException("Repository name already exists or is invalid: " + name, e);
       }
-      log.error("GitHub repository creation failed: {}", e.getMessage());
       throw new GithubApiException("Failed to create repository: " + e.getMessage(), e);
     }
   }
