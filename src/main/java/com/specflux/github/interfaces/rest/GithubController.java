@@ -286,18 +286,6 @@ public class GithubController implements GitHubApi {
     return ResponseEntity.ok(new GithubRepoExistsResponseDto(exists));
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Deletes a GitHub repository.
-   */
-  @Override
-  public ResponseEntity<Void> deleteGithubRepo(String owner, String repo) {
-    githubService.deleteRepository(owner, repo);
-    log.info("Deleted GitHub repository: {}/{}", owner, repo);
-    return ResponseEntity.noContent().build();
-  }
-
   /** Converts a GitHub repository to a DTO. */
   private GithubRepoDto toGithubRepoDto(Repository repo) {
     GithubRepoDto dto = new GithubRepoDto();

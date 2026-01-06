@@ -462,35 +462,6 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
-  // ==================== DELETE /api/github/repos/{owner}/{repo} ====================
-
-  @Test
-  void deleteGithubRepo_shouldDeleteAndReturn204() throws Exception {
-    mockMvc
-        .perform(delete("/api/github/repos/octocat/hello-world").with(user("user")))
-        .andExpect(status().isNoContent());
-
-    verify(githubService).deleteRepository("octocat", "hello-world");
-  }
-
-  @Test
-  void deleteGithubRepo_whenNotConnected_shouldReturn404() throws Exception {
-    org.mockito.Mockito.doThrow(new EntityNotFoundException("No GitHub installation found"))
-        .when(githubService)
-        .deleteRepository(anyString(), anyString());
-
-    mockMvc
-        .perform(delete("/api/github/repos/octocat/hello-world").with(user("user")))
-        .andExpect(status().isNotFound());
-  }
-
-  @Test
-  void deleteGithubRepo_withoutAuth_shouldReturn403() throws Exception {
-    mockMvc
-        .perform(delete("/api/github/repos/octocat/hello-world"))
-        .andExpect(status().isForbidden());
-  }
-
   // ==================== Helper Methods ====================
 
   private Repository createTestRepository(
