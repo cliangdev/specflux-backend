@@ -63,7 +63,8 @@ public class GithubApiClient {
     HttpEntity<Map<String, String>> request = new HttpEntity<>(requestBody, headers);
 
     try {
-      log.debug("Exchanging OAuth code for tokens");
+      String credType = config.isOAuthConfigured() ? "OAuth App" : "GitHub App";
+      log.debug("Exchanging OAuth code for tokens (using {})", credType);
       ResponseEntity<TokenResponse> response =
           restTemplate.postForEntity(url, request, TokenResponse.class);
 
@@ -73,10 +74,10 @@ public class GithubApiClient {
 
       TokenResponse tokenResponse = response.getBody();
       log.info(
-          "OAuth token exchange successful - scope: {}, expires_in: {}, has_refresh: {}",
-          tokenResponse.getScope(),
-          tokenResponse.getExpiresIn(),
-          tokenResponse.getRefreshToken() != null);
+          "OAuth token exchange successful - type: {}, scope: [{}], expires_in: {}s",
+          credType,
+          tokenResponse.getScope() != null ? tokenResponse.getScope() : "none",
+          tokenResponse.getExpiresIn());
       return tokenResponse;
     } catch (HttpClientErrorException e) {
       log.error("GitHub OAuth token exchange failed: {}", e.getMessage());
@@ -200,16 +201,21 @@ public class GithubApiClient {
       log.info("Successfully created GitHub repository: {}", name);
       return response.getBody();
     } catch (HttpClientErrorException e) {
-      log.error("GitHub repository creation failed: {}", e.getMessage());
       if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-        throw new GithubApiException(
-            "Cannot create repository. GitHub App tokens don't have permission to create user repositories. "
-                + "Please create the repository manually on GitHub and use 'Link Existing'.",
-            e);
+        log.error(
+            "GitHub repository creation forbidden - credential_type: {}, response: {}",
+            config.isOAuthConfigured() ? "OAuth App" : "GitHub App",
+            e.getResponseBodyAsString());
+        throw new GithubApiException("No permission to create repository", e);
       }
       if (e.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
+        log.error(
+            "GitHub repository creation failed - name: {}, response: {}",
+            name,
+            e.getResponseBodyAsString());
         throw new GithubApiException("Repository name already exists or is invalid: " + name, e);
       }
+      log.error("GitHub repository creation failed: {}", e.getMessage());
       throw new GithubApiException("Failed to create repository: " + e.getMessage(), e);
     }
   }
