@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.specflux.api.generated.model.ErrorResponseDto;
 import com.specflux.api.generated.model.FieldErrorDto;
+import com.specflux.github.infrastructure.GithubApiClient.GithubApiException;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -80,6 +81,15 @@ public class GlobalExceptionHandler {
     error.setError(ex.getMessage());
     error.setCode("FORBIDDEN");
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+  }
+
+  @ExceptionHandler(GithubApiException.class)
+  public ResponseEntity<ErrorResponseDto> handleGithubApiException(GithubApiException ex) {
+    log.error("GitHub API error: {}", ex.getMessage());
+    ErrorResponseDto error = new ErrorResponseDto();
+    error.setError(ex.getMessage());
+    error.setCode("GITHUB_ERROR");
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
   }
 
   @ExceptionHandler(Exception.class)
