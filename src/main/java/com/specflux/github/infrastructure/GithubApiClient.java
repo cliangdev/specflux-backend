@@ -271,6 +271,39 @@ public class GithubApiClient {
     }
   }
 
+  /**
+   * Checks if a GitHub repository exists and is accessible.
+   *
+   * @param accessToken the access token
+   * @param owner the repository owner (username or organization)
+   * @param repo the repository name
+   * @return true if the repository exists and is accessible, false otherwise
+   */
+  public boolean repositoryExists(String accessToken, String owner, String repo) {
+    String url = GITHUB_API_BASE + "/repos/" + owner + "/" + repo;
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Authorization", "Bearer " + accessToken);
+    headers.set("Accept", "application/vnd.github+json");
+
+    HttpEntity<?> request = new HttpEntity<>(headers);
+
+    try {
+      log.debug("Checking if GitHub repository exists: {}/{}", owner, repo);
+      ResponseEntity<Void> response =
+          restTemplate.exchange(url, HttpMethod.HEAD, request, Void.class);
+
+      return response.getStatusCode().is2xxSuccessful();
+    } catch (HttpClientErrorException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+        log.debug("GitHub repository not found: {}/{}", owner, repo);
+        return false;
+      }
+      log.error("GitHub repository check failed: {}", e.getMessage());
+      throw new GithubApiException("Failed to check repository: " + e.getMessage(), e);
+    }
+  }
+
   /** Estimates total count based on Link header or current page size. */
   private int estimateTotalCount(int currentSize, int page, int perPage, String linkHeader) {
     // If we got fewer than perPage, this is likely the last page

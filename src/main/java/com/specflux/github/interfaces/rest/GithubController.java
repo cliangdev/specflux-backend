@@ -21,6 +21,7 @@ import com.specflux.api.generated.model.CreateGithubRepoRequestDto;
 import com.specflux.api.generated.model.GithubInstallResponseDto;
 import com.specflux.api.generated.model.GithubInstallationStatusDto;
 import com.specflux.api.generated.model.GithubRepoDto;
+import com.specflux.api.generated.model.GithubRepoExistsResponseDto;
 import com.specflux.api.generated.model.GithubRepoListResponseDto;
 import com.specflux.github.application.GithubService;
 import com.specflux.github.domain.GithubInstallation;
@@ -270,6 +271,19 @@ public class GithubController implements GitHubApi {
 
     log.info("Created GitHub repository: {}", repo.getFullName());
     return ResponseEntity.status(HttpStatus.CREATED).body(toGithubRepoDto(repo));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Checks if a GitHub repository exists and is accessible.
+   */
+  @Override
+  public ResponseEntity<GithubRepoExistsResponseDto> checkGithubRepoExists(
+      String owner, String repo) {
+    boolean exists = githubService.repositoryExists(owner, repo);
+    log.debug("Repository {}/{} exists: {}", owner, repo, exists);
+    return ResponseEntity.ok(new GithubRepoExistsResponseDto(exists));
   }
 
   /** Converts a GitHub repository to a DTO. */
