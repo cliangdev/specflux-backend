@@ -116,11 +116,21 @@ public class GithubService {
   /**
    * Refreshes the access token if it's expired or about to expire.
    *
+   * <p>OAuth App tokens don't have refresh tokens, so we skip refresh for those.
+   *
    * @param installation the GitHub installation
    * @return the installation with refreshed tokens (if refresh was needed)
    * @throws GithubApiException if token refresh fails
    */
   public GithubInstallation refreshAccessToken(GithubInstallation installation) {
+    // OAuth Apps don't have refresh tokens - their access tokens are long-lived
+    if (installation.getRefreshToken() == null) {
+      log.debug(
+          "Installation {} has no refresh token (OAuth App), skipping refresh",
+          installation.getPublicId());
+      return installation;
+    }
+
     if (!installation.needsTokenRefresh(TOKEN_REFRESH_THRESHOLD_MINUTES)) {
       log.debug(
           "Access token for installation {} is still valid, skipping refresh",

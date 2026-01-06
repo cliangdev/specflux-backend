@@ -49,11 +49,11 @@ public class GithubInstallation extends AggregateRoot<Long> {
   private Instant accessTokenExpiresAt;
 
   @Setter
-  @Column(name = "refresh_token", nullable = false, length = 500)
+  @Column(name = "refresh_token", length = 500)
   private String refreshToken;
 
   @Setter
-  @Column(name = "refresh_token_expires_at", nullable = false)
+  @Column(name = "refresh_token_expires_at")
   private Instant refreshTokenExpiresAt;
 
   @Setter
