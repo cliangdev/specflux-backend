@@ -72,7 +72,11 @@ public class GithubApiClient {
       }
 
       TokenResponse tokenResponse = response.getBody();
-      log.info("Successfully exchanged OAuth code for tokens");
+      log.info(
+          "OAuth token exchange successful - scope: {}, expires_in: {}, has_refresh: {}",
+          tokenResponse.getScope(),
+          tokenResponse.getExpiresIn(),
+          tokenResponse.getRefreshToken() != null);
       return tokenResponse;
     } catch (HttpClientErrorException e) {
       log.error("GitHub OAuth token exchange failed: {}", e.getMessage());
