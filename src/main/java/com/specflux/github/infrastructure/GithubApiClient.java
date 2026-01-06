@@ -201,20 +201,21 @@ public class GithubApiClient {
       log.info("Successfully created GitHub repository: {}", name);
       return response.getBody();
     } catch (HttpClientErrorException e) {
-      log.error("GitHub repository creation failed: {}", e.getMessage());
       if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-        String message =
-            config.isOAuthConfigured()
-                ? "Cannot create repository. Please disconnect and reconnect GitHub to refresh "
-                    + "permissions, then try again."
-                : "Cannot create repository. GitHub App tokens cannot create user repositories. "
-                    + "Configure GITHUB_OAUTH_CLIENT_ID/SECRET or create the repository on "
-                    + "GitHub and use 'Link Existing'.";
-        throw new GithubApiException(message, e);
+        log.error(
+            "GitHub repository creation forbidden - credential_type: {}, response: {}",
+            config.isOAuthConfigured() ? "OAuth App" : "GitHub App",
+            e.getResponseBodyAsString());
+        throw new GithubApiException("No permission to create repository", e);
       }
       if (e.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
+        log.error(
+            "GitHub repository creation failed - name: {}, response: {}",
+            name,
+            e.getResponseBodyAsString());
         throw new GithubApiException("Repository name already exists or is invalid: " + name, e);
       }
+      log.error("GitHub repository creation failed: {}", e.getMessage());
       throw new GithubApiException("Failed to create repository: " + e.getMessage(), e);
     }
   }
