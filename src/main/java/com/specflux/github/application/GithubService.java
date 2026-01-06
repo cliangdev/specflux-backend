@@ -252,6 +252,37 @@ public class GithubService {
         });
   }
 
+  /**
+   * Checks if a GitHub repository exists and is accessible.
+   *
+   * @param owner the repository owner
+   * @param repo the repository name
+   * @return true if the repository exists and is accessible
+   * @throws GithubApiException if the check fails
+   */
+  public boolean repositoryExists(String owner, String repo) {
+    GithubInstallation installation = getInstallation();
+    GithubInstallation freshInstallation = refreshAccessToken(installation);
+
+    log.debug("Checking if GitHub repository exists: {}/{}", owner, repo);
+    return githubApiClient.repositoryExists(freshInstallation.getAccessToken(), owner, repo);
+  }
+
+  /**
+   * Deletes a GitHub repository.
+   *
+   * @param owner the repository owner
+   * @param repo the repository name
+   * @throws GithubApiException if the deletion fails
+   */
+  public void deleteRepository(String owner, String repo) {
+    GithubInstallation installation = getInstallation();
+    GithubInstallation freshInstallation = refreshAccessToken(installation);
+
+    log.info("Deleting GitHub repository: {}/{}", owner, repo);
+    githubApiClient.deleteRepository(freshInstallation.getAccessToken(), owner, repo);
+  }
+
   private String generatePublicId(String prefix) {
     return prefix + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
   }
