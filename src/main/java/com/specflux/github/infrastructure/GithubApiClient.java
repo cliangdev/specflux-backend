@@ -56,14 +56,16 @@ public class GithubApiClient {
 
     Map<String, String> requestBody =
         Map.of(
-            "client_id", config.getClientId(),
-            "client_secret", config.getClientSecret(),
+            "client_id", config.getEffectiveClientId(),
+            "client_secret", config.getEffectiveClientSecret(),
             "code", code);
 
     HttpEntity<Map<String, String>> request = new HttpEntity<>(requestBody, headers);
 
     try {
-      log.debug("Exchanging OAuth code for tokens");
+      log.debug(
+          "Exchanging OAuth code for tokens (using {})",
+          config.isOAuthAppConfigured() ? "OAuth App" : "GitHub App");
       ResponseEntity<TokenResponse> response =
           restTemplate.postForEntity(url, request, TokenResponse.class);
 
@@ -73,7 +75,8 @@ public class GithubApiClient {
 
       TokenResponse tokenResponse = response.getBody();
       log.info(
-          "OAuth token exchange successful - scope: {}, expires_in: {}, has_refresh: {}",
+          "OAuth token exchange successful - type: {}, scope: {}, expires_in: {}, has_refresh: {}",
+          config.isOAuthAppConfigured() ? "OAuth App" : "GitHub App",
           tokenResponse.getScope(),
           tokenResponse.getExpiresIn(),
           tokenResponse.getRefreshToken() != null);
@@ -101,9 +104,9 @@ public class GithubApiClient {
     Map<String, String> requestBody =
         Map.of(
             "client_id",
-            config.getClientId(),
+            config.getEffectiveClientId(),
             "client_secret",
-            config.getClientSecret(),
+            config.getEffectiveClientSecret(),
             "grant_type",
             "refresh_token",
             "refresh_token",
@@ -202,10 +205,14 @@ public class GithubApiClient {
     } catch (HttpClientErrorException e) {
       log.error("GitHub repository creation failed: {}", e.getMessage());
       if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-        throw new GithubApiException(
-            "Cannot create repository. GitHub App tokens don't have permission to create user repositories. "
-                + "Please create the repository manually on GitHub and use 'Link Existing'.",
-            e);
+        String message =
+            config.isOAuthAppConfigured()
+                ? "Cannot create repository. Token lacks required permissions. "
+                    + "Please reconnect GitHub and try again."
+                : "Cannot create repository. GitHub App tokens cannot create user repositories. "
+                    + "Please configure OAuth App credentials (GITHUB_OAUTH_CLIENT_ID/SECRET) "
+                    + "or create the repository manually on GitHub and use 'Link Existing'.";
+        throw new GithubApiException(message, e);
       }
       if (e.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
         throw new GithubApiException("Repository name already exists or is invalid: " + name, e);

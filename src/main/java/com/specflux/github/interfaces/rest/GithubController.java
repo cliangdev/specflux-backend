@@ -72,7 +72,7 @@ public class GithubController implements GitHubApi {
     String authUrl =
         String.format(
             "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=repo&state=%s",
-            githubAppConfig.getClientId(),
+            githubAppConfig.getEffectiveClientId(),
             githubAppConfig.getRedirectUri(),
             URLEncoder.encode(state, StandardCharsets.UTF_8));
 
