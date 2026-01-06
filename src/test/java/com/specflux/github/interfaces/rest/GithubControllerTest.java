@@ -423,6 +423,74 @@ class GithubControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(status().isBadRequest());
   }
 
+  // ==================== GET /api/github/repos/{owner}/{repo}/exists ====================
+
+  @Test
+  void checkGithubRepoExists_whenExists_shouldReturnTrue() throws Exception {
+    when(githubService.repositoryExists("octocat", "hello-world")).thenReturn(true);
+
+    mockMvc
+        .perform(get("/api/github/repos/octocat/hello-world/exists").with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.exists").value(true));
+  }
+
+  @Test
+  void checkGithubRepoExists_whenNotExists_shouldReturnFalse() throws Exception {
+    when(githubService.repositoryExists("octocat", "deleted-repo")).thenReturn(false);
+
+    mockMvc
+        .perform(get("/api/github/repos/octocat/deleted-repo/exists").with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.exists").value(false));
+  }
+
+  @Test
+  void checkGithubRepoExists_whenNotConnected_shouldReturn404() throws Exception {
+    when(githubService.repositoryExists(anyString(), anyString()))
+        .thenThrow(new EntityNotFoundException("No GitHub installation found"));
+
+    mockMvc
+        .perform(get("/api/github/repos/octocat/hello-world/exists").with(user("user")))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void checkGithubRepoExists_withoutAuth_shouldReturn403() throws Exception {
+    mockMvc
+        .perform(get("/api/github/repos/octocat/hello-world/exists"))
+        .andExpect(status().isForbidden());
+  }
+
+  // ==================== DELETE /api/github/repos/{owner}/{repo} ====================
+
+  @Test
+  void deleteGithubRepo_shouldDeleteAndReturn204() throws Exception {
+    mockMvc
+        .perform(delete("/api/github/repos/octocat/hello-world").with(user("user")))
+        .andExpect(status().isNoContent());
+
+    verify(githubService).deleteRepository("octocat", "hello-world");
+  }
+
+  @Test
+  void deleteGithubRepo_whenNotConnected_shouldReturn404() throws Exception {
+    org.mockito.Mockito.doThrow(new EntityNotFoundException("No GitHub installation found"))
+        .when(githubService)
+        .deleteRepository(anyString(), anyString());
+
+    mockMvc
+        .perform(delete("/api/github/repos/octocat/hello-world").with(user("user")))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void deleteGithubRepo_withoutAuth_shouldReturn403() throws Exception {
+    mockMvc
+        .perform(delete("/api/github/repos/octocat/hello-world"))
+        .andExpect(status().isForbidden());
+  }
+
   // ==================== Helper Methods ====================
 
   private Repository createTestRepository(
