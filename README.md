@@ -14,7 +14,6 @@ REST API for managing AI-assisted software development workflows:
 | **PRDs** | Product requirements documents with supporting files |
 | **Epics** | Large features with acceptance criteria and task breakdown |
 | **Tasks** | Individual work units with status, dependencies, and criteria |
-| **Releases** | Milestones grouping completed epics |
 | **Repositories** | Git repositories linked to projects |
 | **Skills** | Claude Code skill definitions |
 | **Agents** | Claude Code agent configurations |
@@ -75,8 +74,7 @@ src/main/java/com/specflux/
 ├── user/                         # User bounded context
 ├── project/                      # Project bounded context
 ├── epic/                         # Epic bounded context
-├── task/                         # Task bounded context
-└── release/                      # Release bounded context
+└── task/                         # Task bounded context
 
 Each bounded context contains:
 ├── domain/                       # Core business logic
