@@ -26,8 +26,6 @@ import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectMember;
 import com.specflux.project.domain.ProjectMemberRepository;
 import com.specflux.project.domain.ProjectRepository;
-import com.specflux.release.domain.Release;
-import com.specflux.release.domain.ReleaseRepository;
 import com.specflux.task.domain.Task;
 import com.specflux.task.domain.TaskDependency;
 import com.specflux.task.domain.TaskDependencyRepository;
@@ -50,7 +48,6 @@ public class MigrationService {
   private final EpicRepository epicRepository;
   private final EpicDependencyRepository epicDependencyRepository;
   private final TaskRepository taskRepository;
-  private final ReleaseRepository releaseRepository;
   private final AcceptanceCriteriaRepository acceptanceCriteriaRepository;
   private final TaskDependencyRepository taskDependencyRepository;
 
@@ -60,7 +57,6 @@ public class MigrationService {
   private final Map<Long, Project> projectMap = new HashMap<>();
   private final Map<Long, Epic> epicMap = new HashMap<>();
   private final Map<Long, Task> taskMap = new HashMap<>();
-  private final Map<Long, Release> releaseMap = new HashMap<>();
 
   /**
    * Migrates all data from SQLite database to PostgreSQL.
@@ -82,10 +78,8 @@ public class MigrationService {
       projectMap.clear();
       epicMap.clear();
       taskMap.clear();
-      releaseMap.clear();
 
       int projectCount = 0;
-      int releaseCount = 0;
       int epicCount = 0;
       int epicDepCount = 0;
       int taskCount = 0;
@@ -96,9 +90,6 @@ public class MigrationService {
         // Migrate in FK dependency order
         projectCount = migrateProjects(conn, targetUser);
         log.info("Migrated {} projects", projectCount);
-
-        releaseCount = migrateReleases(conn);
-        log.info("Migrated {} releases", releaseCount);
 
         epicCount = migrateEpics(conn, targetUser);
         log.info("Migrated {} epics", epicCount);
@@ -119,7 +110,7 @@ public class MigrationService {
       MigrationResult.MigrationStats stats =
           MigrationResult.MigrationStats.builder()
               .projects(projectCount)
-              .releases(releaseCount)
+              .releases(0)
               .epics(epicCount)
               .epicDependencies(epicDepCount)
               .tasks(taskCount)
@@ -144,7 +135,6 @@ public class MigrationService {
     entityManager.createNativeQuery("TRUNCATE TABLE tasks CASCADE").executeUpdate();
     entityManager.createNativeQuery("TRUNCATE TABLE epic_dependencies CASCADE").executeUpdate();
     entityManager.createNativeQuery("TRUNCATE TABLE epics CASCADE").executeUpdate();
-    entityManager.createNativeQuery("TRUNCATE TABLE releases CASCADE").executeUpdate();
     entityManager.createNativeQuery("TRUNCATE TABLE project_members CASCADE").executeUpdate();
     entityManager.createNativeQuery("TRUNCATE TABLE projects CASCADE").executeUpdate();
     log.info("Existing data cleared");
@@ -188,59 +178,10 @@ public class MigrationService {
     return count;
   }
 
-  private int migrateReleases(Connection conn) throws SQLException {
-    int count = 0;
-    String sql =
-        "SELECT id, project_id, name, description, target_date, status, created_at FROM releases";
-
-    try (Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql)) {
-
-      while (rs.next()) {
-        long v1Id = rs.getLong("id");
-        long v1ProjectId = rs.getLong("project_id");
-        String name = rs.getString("name");
-        String description = rs.getString("description");
-        String targetDateStr = rs.getString("target_date");
-        String status = rs.getString("status");
-
-        Project project = projectMap.get(v1ProjectId);
-        if (project == null) {
-          log.warn("Skipping release {} - project {} not found", v1Id, v1ProjectId);
-          continue;
-        }
-
-        int seqNum = project.nextReleaseSequence();
-        String displayKey = project.getProjectKey() + "-R" + seqNum;
-        String publicId = generatePublicId("rel");
-
-        Release release = new Release(publicId, project, seqNum, displayKey, name);
-        release.setDescription(description);
-        release.setStatus(StatusMapper.mapReleaseStatus(status));
-
-        if (targetDateStr != null && !targetDateStr.isEmpty()) {
-          try {
-            release.setTargetDate(LocalDate.parse(targetDateStr.substring(0, 10)));
-          } catch (Exception e) {
-            log.warn("Could not parse target date: {}", targetDateStr);
-          }
-        }
-
-        Release saved = releaseRepository.save(release);
-        projectRepository.save(project); // Save updated sequence
-
-        releaseMap.put(v1Id, saved);
-        count++;
-      }
-    }
-
-    return count;
-  }
-
   private int migrateEpics(Connection conn, User targetUser) throws SQLException {
     int count = 0;
     String sql =
-        "SELECT id, project_id, title, description, status, target_date, release_id,"
+        "SELECT id, project_id, title, description, status, target_date,"
             + " prd_file_path, epic_file_path, created_at FROM epics";
 
     try (Statement stmt = conn.createStatement();
@@ -253,7 +194,6 @@ public class MigrationService {
         String description = rs.getString("description");
         String status = rs.getString("status");
         String targetDateStr = rs.getString("target_date");
-        long v1ReleaseId = rs.getLong("release_id");
         String prdFilePath = rs.getString("prd_file_path");
         String epicFilePath = rs.getString("epic_file_path");
 
@@ -278,14 +218,6 @@ public class MigrationService {
             epic.setTargetDate(LocalDate.parse(targetDateStr.substring(0, 10)));
           } catch (Exception e) {
             log.warn("Could not parse target date: {}", targetDateStr);
-          }
-        }
-
-        // Map release ID
-        if (v1ReleaseId > 0) {
-          Release release = releaseMap.get(v1ReleaseId);
-          if (release != null) {
-            epic.setReleaseId(release.getId());
           }
         }
 

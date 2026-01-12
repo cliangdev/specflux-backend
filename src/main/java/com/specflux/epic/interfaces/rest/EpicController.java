@@ -63,11 +63,9 @@ public class EpicController implements EpicsApi {
       String sort,
       String order,
       EpicStatusDto status,
-      String prdRef,
-      String releaseRef) {
+      String prdRef) {
     EpicListResponseDto response =
-        epicApplicationService.listEpics(
-            projectRef, cursor, limit, sort, order, status, prdRef, releaseRef);
+        epicApplicationService.listEpics(projectRef, cursor, limit, sort, order, status, prdRef);
     return ResponseEntity.ok(response);
   }
 

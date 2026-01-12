@@ -40,9 +40,6 @@ public class Epic extends AggregateRoot<Long> {
   @JoinColumn(name = "project_id", nullable = false)
   private Project project;
 
-  @Column(name = "release_id")
-  private Long releaseId;
-
   @Column(name = "sequence_number", nullable = false)
   private Integer sequenceNumber;
 
@@ -112,9 +109,5 @@ public class Epic extends AggregateRoot<Long> {
   @PreUpdate
   protected void onUpdate() {
     this.updatedAt = Instant.now();
-  }
-
-  public void setReleaseId(Long releaseId) {
-    this.releaseId = releaseId;
   }
 }

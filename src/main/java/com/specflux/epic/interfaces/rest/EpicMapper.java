@@ -16,8 +16,6 @@ import com.specflux.epic.domain.EpicDependencyRepository;
 import com.specflux.epic.domain.EpicStatus;
 import com.specflux.prd.domain.Prd;
 import com.specflux.prd.domain.PrdRepository;
-import com.specflux.release.domain.Release;
-import com.specflux.release.domain.ReleaseRepository;
 import com.specflux.task.domain.Task;
 import com.specflux.task.domain.TaskRepository;
 import com.specflux.task.domain.TaskStatus;
@@ -30,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 public class EpicMapper {
 
   private final TaskRepository taskRepository;
-  private final ReleaseRepository releaseRepository;
   private final EpicDependencyRepository epicDependencyRepository;
   private final PrdRepository prdRepository;
 
@@ -60,14 +57,6 @@ public class EpicMapper {
     dto.setPrdFilePath(domain.getPrdFilePath());
     dto.setEpicFilePath(domain.getEpicFilePath());
     dto.setNotes(domain.getNotes());
-
-    // Release ID (public ID of the release)
-    if (domain.getReleaseId() != null) {
-      releaseRepository
-          .findById(domain.getReleaseId())
-          .map(Release::getPublicId)
-          .ifPresent(dto::setReleaseId);
-    }
 
     // Compute task stats
     List<Task> tasks = taskRepository.findByEpicId(domain.getId());
@@ -118,14 +107,6 @@ public class EpicMapper {
     dto.setPrdFilePath(domain.getPrdFilePath());
     dto.setEpicFilePath(domain.getEpicFilePath());
     dto.setNotes(domain.getNotes());
-
-    // Set release ID if present
-    if (domain.getReleaseId() != null) {
-      releaseRepository
-          .findById(domain.getReleaseId())
-          .map(Release::getPublicId)
-          .ifPresent(dto::setReleaseId);
-    }
 
     // Compute task stats
     List<Task> tasks = taskRepository.findByEpicId(domain.getId());

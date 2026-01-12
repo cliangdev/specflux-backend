@@ -1,7 +1,6 @@
 package com.specflux.migration;
 
 import com.specflux.epic.domain.EpicStatus;
-import com.specflux.release.domain.ReleaseStatus;
 import com.specflux.task.domain.TaskStatus;
 
 /** Maps v1 status strings to v2 enum values. */
@@ -50,26 +49,6 @@ public final class StatusMapper {
       case "pending_review" -> TaskStatus.IN_REVIEW;
       case "approved", "done" -> TaskStatus.COMPLETED;
       default -> TaskStatus.BACKLOG;
-    };
-  }
-
-  /**
-   * Maps v1 release status to v2 ReleaseStatus.
-   *
-   * <p>v1 values: planned, in_progress, released
-   *
-   * @param v1Status the v1 status string
-   * @return the corresponding ReleaseStatus
-   */
-  public static ReleaseStatus mapReleaseStatus(String v1Status) {
-    if (v1Status == null) {
-      return ReleaseStatus.PLANNED;
-    }
-    return switch (v1Status.toLowerCase()) {
-      case "planned" -> ReleaseStatus.PLANNED;
-      case "in_progress" -> ReleaseStatus.IN_PROGRESS;
-      case "released" -> ReleaseStatus.RELEASED;
-      default -> ReleaseStatus.PLANNED;
     };
   }
 }

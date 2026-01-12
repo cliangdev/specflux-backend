@@ -66,7 +66,6 @@ class FlywayMigrationTest {
               "epics",
               "tasks",
               "task_dependencies",
-              "releases",
               "acceptance_criteria",
               "notifications",
               "flyway_schema_history");

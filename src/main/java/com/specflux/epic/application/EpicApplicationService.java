@@ -28,7 +28,6 @@ import com.specflux.epic.domain.EpicRepository;
 import com.specflux.epic.interfaces.rest.EpicMapper;
 import com.specflux.prd.domain.Prd;
 import com.specflux.project.domain.Project;
-import com.specflux.release.domain.Release;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.shared.application.UpdateHelper;
 import com.specflux.shared.interfaces.rest.RefResolver;
@@ -145,11 +144,6 @@ public class EpicApplicationService {
         Prd::getId,
         epic::setPrdId);
     UpdateHelper.applyString(request.getPrdFilePath(), epic::setPrdFilePath);
-    UpdateHelper.applyRefId(
-        request.getReleaseRef(),
-        ref -> refResolver.resolveRelease(project, ref),
-        Release::getId,
-        epic::setReleaseId);
     UpdateHelper.applyString(request.getNotes(), epic::setNotes);
 
     Epic saved = transactionTemplate.execute(status -> epicRepository.save(epic));
@@ -178,7 +172,6 @@ public class EpicApplicationService {
    * @param order the sort order (asc/desc)
    * @param status optional status filter
    * @param prdRef optional PRD reference filter (public ID or display key)
-   * @param releaseRef optional Release reference filter (public ID or display key)
    * @return the paginated epic list
    */
   public EpicListResponseDto listEpics(
@@ -188,15 +181,13 @@ public class EpicApplicationService {
       String sort,
       String order,
       EpicStatusDto status,
-      String prdRef,
-      String releaseRef) {
+      String prdRef) {
 
     log.debug(
-        "[listEpics] Starting - projectRef={}, status={}, prdRef={}, releaseRef={}, limit={}",
+        "[listEpics] Starting - projectRef={}, status={}, prdRef={}, limit={}",
         projectRef,
         status,
         prdRef,
-        releaseRef,
         limit);
 
     Project project = refResolver.resolveProject(projectRef);
@@ -213,16 +204,8 @@ public class EpicApplicationService {
       log.debug("[listEpics] Resolved prdRef {} to prdId {}", prdRef, prdId);
     }
 
-    // Resolve Release if releaseRef is provided
-    Long releaseId = null;
-    if (releaseRef != null && !releaseRef.isBlank()) {
-      Release release = refResolver.resolveRelease(project, releaseRef);
-      releaseId = release.getId();
-      log.debug("[listEpics] Resolved releaseRef {} to releaseId {}", releaseRef, releaseId);
-    }
-
     // Get epics for project with optional filters
-    List<Epic> allEpics = fetchEpicsWithFilters(project.getId(), status, prdId, releaseId);
+    List<Epic> allEpics = fetchEpicsWithFilters(project.getId(), status, prdId);
     log.debug("[listEpics] Found {} epics for project {}", allEpics.size(), project.getId());
 
     long total = allEpics.size();
@@ -430,28 +413,10 @@ public class EpicApplicationService {
    * @param projectId the project ID
    * @param status optional status filter
    * @param prdId optional PRD ID filter
-   * @param releaseId optional Release ID filter
    * @return list of matching epics
    */
-  private List<Epic> fetchEpicsWithFilters(
-      Long projectId, EpicStatusDto status, Long prdId, Long releaseId) {
+  private List<Epic> fetchEpicsWithFilters(Long projectId, EpicStatusDto status, Long prdId) {
 
-    // Use repository method that supports all filters
-    if (releaseId != null) {
-      // Filter by release (may also filter by status/prdId)
-      List<Epic> epics = epicRepository.findByProjectIdAndReleaseId(projectId, releaseId);
-      // Apply additional filters in memory if needed
-      if (status != null) {
-        epics =
-            epics.stream().filter(e -> e.getStatus() == epicMapper.toDomainStatus(status)).toList();
-      }
-      if (prdId != null) {
-        epics = epics.stream().filter(e -> prdId.equals(e.getPrdId())).toList();
-      }
-      return epics;
-    }
-
-    // Original logic without releaseRef
     if (status != null && prdId != null) {
       return epicRepository.findByProjectIdAndStatusAndPrdId(
           projectId, epicMapper.toDomainStatus(status), prdId);
