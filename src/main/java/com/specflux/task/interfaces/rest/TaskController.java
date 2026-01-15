@@ -67,7 +67,9 @@ public class TaskController implements TasksApi {
       TaskPriorityDto priority,
       String epicRef,
       String assignedToRef,
-      String search) {
+      String search,
+      String prdTag,
+      String statusNot) {
     TaskListResponseDto response =
         taskApplicationService.listTasks(
             projectRef,
@@ -79,7 +81,9 @@ public class TaskController implements TasksApi {
             priority,
             epicRef,
             assignedToRef,
-            search);
+            search,
+            prdTag,
+            statusNot);
     return ResponseEntity.ok(response);
   }
 
