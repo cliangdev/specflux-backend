@@ -36,6 +36,7 @@ public class PrdMapper {
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
     dto.setDescription(domain.getDescription());
+    dto.setTag(domain.getTag());
     dto.setFolderPath(domain.getFolderPath());
     dto.setStatus(toApiStatus(domain.getStatus()));
     dto.setCreatedById(domain.getCreatedBy().getPublicId());
@@ -64,6 +65,7 @@ public class PrdMapper {
     dto.setProjectId(domain.getProject().getPublicId());
     dto.setTitle(domain.getTitle());
     dto.setDescription(domain.getDescription());
+    dto.setTag(domain.getTag());
     dto.setFolderPath(domain.getFolderPath());
     dto.setStatus(toApiStatus(domain.getStatus()));
     dto.setCreatedById(domain.getCreatedBy().getPublicId());

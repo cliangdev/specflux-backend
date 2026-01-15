@@ -20,5 +20,7 @@ public interface PrdRepository extends JpaRepository<Prd, Long> {
 
   List<Prd> findByProjectIdAndStatus(Long projectId, PrdStatus status);
 
+  List<Prd> findByProjectIdAndTag(Long projectId, String tag);
+
   int countByProjectId(Long projectId);
 }

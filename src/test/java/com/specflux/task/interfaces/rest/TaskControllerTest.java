@@ -21,6 +21,8 @@ import com.specflux.api.generated.model.UpdateTaskRequestDto;
 import com.specflux.common.AbstractControllerIntegrationTest;
 import com.specflux.epic.domain.Epic;
 import com.specflux.epic.domain.EpicRepository;
+import com.specflux.prd.domain.Prd;
+import com.specflux.prd.domain.PrdRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.project.domain.ProjectRepository;
 import com.specflux.task.domain.Task;
@@ -42,6 +44,7 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
 
   @Autowired private ProjectRepository projectRepository;
   @Autowired private EpicRepository epicRepository;
+  @Autowired private PrdRepository prdRepository;
   @Autowired private TaskRepository taskRepository;
 
   private Project testProject;
@@ -370,6 +373,123 @@ class TaskControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(jsonPath("$.data.length()").value(0))
         .andExpect(jsonPath("$.pagination.total").value(0))
         .andExpect(jsonPath("$.pagination.hasMore").value(false));
+  }
+
+  @Test
+  void listTasks_withPrdTagFilter_shouldReturnTasksFromMatchingPrdOnly() throws Exception {
+    // Create PRD with tag
+    Prd prd =
+        new Prd(
+            "prd_tagged",
+            testProject,
+            1,
+            "TASK-P1",
+            "Tagged PRD",
+            ".specflux/prds/tagged",
+            testUser);
+    prd.setTag("mvp-phase1");
+    prdRepository.save(prd);
+
+    // Create epic linked to PRD
+    Epic epicWithPrd =
+        new Epic("epic_withprd", testProject, 2, "TASK-E2", "Epic with PRD", testUser);
+    epicWithPrd.setPrdId(prd.getId());
+    epicRepository.save(epicWithPrd);
+
+    // Create task linked to epic with PRD
+    Task taskWithPrd =
+        new Task("task_withprd", testProject, 1, "TASK-1", "Task with PRD Tag", testUser);
+    taskWithPrd.setEpic(epicWithPrd);
+    taskRepository.save(taskWithPrd);
+
+    // Create task without PRD link
+    Task taskNoPrd = new Task("task_noprd", testProject, 2, "TASK-2", "Task without PRD", testUser);
+    taskNoPrd.setEpic(testEpic); // testEpic has no PRD
+    taskRepository.save(taskNoPrd);
+
+    // Filter by prdTag should return only taskWithPrd
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdTag", "mvp-phase1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].id").value("task_withprd"));
+  }
+
+  @Test
+  void listTasks_withStatusNotFilter_shouldExcludeMatchingStatuses() throws Exception {
+    Task task1 = new Task("task_backlog2", testProject, 1, "TASK-1", "Backlog Task", testUser);
+    task1.setStatus(TaskStatus.BACKLOG);
+    taskRepository.save(task1);
+
+    Task task2 = new Task("task_completed", testProject, 2, "TASK-2", "Completed Task", testUser);
+    task2.setStatus(TaskStatus.COMPLETED);
+    taskRepository.save(task2);
+
+    Task task3 = new Task("task_cancelled", testProject, 3, "TASK-3", "Cancelled Task", testUser);
+    task3.setStatus(TaskStatus.CANCELLED);
+    taskRepository.save(task3);
+
+    Task task4 = new Task("task_inprog2", testProject, 4, "TASK-4", "In Progress Task", testUser);
+    task4.setStatus(TaskStatus.IN_PROGRESS);
+    taskRepository.save(task4);
+
+    // Filter out COMPLETED and CANCELLED
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
+                .with(user("user"))
+                .param("statusNot", "COMPLETED,CANCELLED"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(2))
+        .andExpect(jsonPath("$.data[?(@.id=='task_backlog2')]").exists())
+        .andExpect(jsonPath("$.data[?(@.id=='task_inprog2')]").exists())
+        .andExpect(jsonPath("$.data[?(@.id=='task_completed')]").doesNotExist())
+        .andExpect(jsonPath("$.data[?(@.id=='task_cancelled')]").doesNotExist());
+  }
+
+  @Test
+  void listTasks_withPrdTagAndStatusNot_shouldCombineFilters() throws Exception {
+    // Create PRD with tag
+    Prd prd =
+        new Prd(
+            "prd_combo", testProject, 1, "TASK-P2", "Combo PRD", ".specflux/prds/combo", testUser);
+    prd.setTag("combo-tag");
+    prdRepository.save(prd);
+
+    // Create epic linked to PRD
+    Epic epicWithPrd = new Epic("epic_combo", testProject, 3, "TASK-E3", "Epic Combo", testUser);
+    epicWithPrd.setPrdId(prd.getId());
+    epicRepository.save(epicWithPrd);
+
+    // Create tasks with various statuses linked to PRD
+    Task task1 = new Task("task_combo1", testProject, 1, "TASK-1", "Combo Task 1", testUser);
+    task1.setEpic(epicWithPrd);
+    task1.setStatus(TaskStatus.BACKLOG);
+    taskRepository.save(task1);
+
+    Task task2 = new Task("task_combo2", testProject, 2, "TASK-2", "Combo Task 2", testUser);
+    task2.setEpic(epicWithPrd);
+    task2.setStatus(TaskStatus.COMPLETED);
+    taskRepository.save(task2);
+
+    // Task not linked to PRD with combo-tag
+    Task task3 = new Task("task_other", testProject, 3, "TASK-3", "Other Task", testUser);
+    task3.setStatus(TaskStatus.BACKLOG);
+    taskRepository.save(task3);
+
+    // Filter by prdTag=combo-tag AND statusNot=COMPLETED should return only task_combo1
+    mockMvc
+        .perform(
+            get("/api/projects/{projectRef}/tasks", testProject.getPublicId())
+                .with(user("user"))
+                .param("prdTag", "combo-tag")
+                .param("statusNot", "COMPLETED"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].id").value("task_combo1"));
   }
 
   @Test

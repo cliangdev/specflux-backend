@@ -60,6 +60,10 @@ public class Prd extends AggregateRoot<Long> {
   @Column(columnDefinition = "TEXT")
   private String description;
 
+  @Setter
+  @Column(length = 100)
+  private String tag;
+
   @Column(name = "folder_path", nullable = false, length = 500)
   private String folderPath;
 

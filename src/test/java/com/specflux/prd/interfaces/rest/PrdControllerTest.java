@@ -111,6 +111,23 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
   }
 
   @Test
+  void createPrd_withTag_shouldPersistTag() throws Exception {
+    CreatePrdRequestDto request = new CreatePrdRequestDto();
+    request.setTitle("Tagged PRD");
+    request.setTag("mvp-phase1");
+
+    mockMvc
+        .perform(
+            post("/api/projects/{projectRef}/prds", testProject.getPublicId())
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.title").value("Tagged PRD"))
+        .andExpect(jsonPath("$.tag").value("mvp-phase1"));
+  }
+
+  @Test
   void createPrd_projectNotFound_shouldReturn404() throws Exception {
     CreatePrdRequestDto request = new CreatePrdRequestDto();
     request.setTitle("Test PRD");
@@ -232,6 +249,35 @@ class PrdControllerTest extends AbstractControllerIntegrationTest {
         .andExpect(jsonPath("$.title").value("Updated Title"))
         .andExpect(jsonPath("$.description").value("New description"))
         .andExpect(jsonPath("$.status").value("IN_REVIEW"));
+  }
+
+  @Test
+  void updatePrd_withTag_shouldUpdateTag() throws Exception {
+    Prd prd =
+        prdRepository.save(
+            new Prd(
+                "prd_tag_update",
+                testProject,
+                1,
+                "PRDT-P1",
+                "PRD With Tag",
+                ".specflux/prds/tag-update",
+                testUser));
+
+    UpdatePrdRequestDto request = new UpdatePrdRequestDto();
+    request.setTag("backend-refactor");
+
+    mockMvc
+        .perform(
+            put(
+                    "/api/projects/{projectRef}/prds/{prdRef}",
+                    testProject.getPublicId(),
+                    "prd_tag_update")
+                .with(user("user"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.tag").value("backend-refactor"));
   }
 
   @Test

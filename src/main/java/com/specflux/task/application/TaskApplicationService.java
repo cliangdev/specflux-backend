@@ -1,10 +1,13 @@
 package com.specflux.task.application;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
@@ -23,6 +26,8 @@ import com.specflux.api.generated.model.TaskPriorityDto;
 import com.specflux.api.generated.model.TaskStatusDto;
 import com.specflux.api.generated.model.UpdateTaskRequestDto;
 import com.specflux.epic.domain.Epic;
+import com.specflux.prd.domain.Prd;
+import com.specflux.prd.domain.PrdRepository;
 import com.specflux.project.domain.Project;
 import com.specflux.shared.application.CurrentUserService;
 import com.specflux.shared.application.UpdateHelper;
@@ -32,6 +37,7 @@ import com.specflux.task.domain.TaskDependency;
 import com.specflux.task.domain.TaskDependencyRepository;
 import com.specflux.task.domain.TaskPriority;
 import com.specflux.task.domain.TaskRepository;
+import com.specflux.task.domain.TaskStatus;
 import com.specflux.task.interfaces.rest.TaskMapper;
 import com.specflux.user.domain.User;
 
@@ -46,6 +52,7 @@ public class TaskApplicationService {
 
   private final TaskRepository taskRepository;
   private final TaskDependencyRepository taskDependencyRepository;
+  private final PrdRepository prdRepository;
   private final RefResolver refResolver;
   private final CurrentUserService currentUserService;
   private final TransactionTemplate transactionTemplate;
@@ -161,6 +168,8 @@ public class TaskApplicationService {
    * @param epicRef optional epic filter
    * @param assignedToRef optional assignee filter
    * @param search optional search term
+   * @param prdTag optional filter by PRD tag
+   * @param statusNot optional comma-separated statuses to exclude
    * @return the paginated task list
    */
   public TaskListResponseDto listTasks(
@@ -173,7 +182,9 @@ public class TaskApplicationService {
       TaskPriorityDto priority,
       String epicRef,
       String assignedToRef,
-      String search) {
+      String search,
+      String prdTag,
+      String statusNot) {
 
     Project project = refResolver.resolveProject(projectRef);
 
@@ -223,6 +234,25 @@ public class TaskApplicationService {
                   t.getTitle().toLowerCase().contains(searchLower)
                       || (t.getDescription() != null
                           && t.getDescription().toLowerCase().contains(searchLower)));
+    }
+    if (prdTag != null && !prdTag.isBlank()) {
+      List<Prd> prdsWithTag = prdRepository.findByProjectIdAndTag(project.getId(), prdTag);
+      Set<Long> prdIds = prdsWithTag.stream().map(Prd::getId).collect(Collectors.toSet());
+      taskStream =
+          taskStream.filter(
+              t ->
+                  t.getEpic() != null
+                      && t.getEpic().getPrdId() != null
+                      && prdIds.contains(t.getEpic().getPrdId()));
+    }
+    if (statusNot != null && !statusNot.isBlank()) {
+      Set<TaskStatus> excludedStatuses =
+          Arrays.stream(statusNot.split(","))
+              .map(String::trim)
+              .map(TaskStatusDto::fromValue)
+              .map(TaskMapper::toDomainStatus)
+              .collect(Collectors.toSet());
+      taskStream = taskStream.filter(t -> !excludedStatuses.contains(t.getStatus()));
     }
 
     List<Task> filteredTasks = taskStream.toList();
