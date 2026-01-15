@@ -83,6 +83,7 @@ public class PrdApplicationService {
                   folderPath,
                   currentUser);
           prd.setDescription(request.getDescription());
+          prd.setTag(request.getTag());
 
           Prd saved = prdRepository.save(prd);
           return prdMapper.toDto(saved);
@@ -116,6 +117,7 @@ public class PrdApplicationService {
 
     UpdateHelper.applyValue(request.getTitle(), prd::setTitle);
     UpdateHelper.applyString(request.getDescription(), prd::setDescription);
+    UpdateHelper.applyString(request.getTag(), prd::setTag);
     UpdateHelper.applyValue(request.getStatus(), s -> prd.setStatus(prdMapper.toDomainStatus(s)));
 
     Prd saved = transactionTemplate.execute(s -> prdRepository.save(prd));
